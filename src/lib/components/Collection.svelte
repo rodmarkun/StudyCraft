@@ -1,19 +1,23 @@
 <!-- src/lib/components/Collection.svelte -->
 <script lang="ts">
-  import { deleteCollection, removeStudyMaterial, addStudyMaterials } from '../stores/collections';
+  import { deleteCollection, removeStudyMaterial, addStudyMaterials, addFlashcardDeck, removeFlashcardDeck, addFlashcardToDeck, removeFlashcardFromDeck } from '../stores/collections';
+  import type { StudyMaterial, FlashcardDeck, Flashcard, TestData } from '../stores/collections';
   import MarkdownRenderer from './MarkdownRenderer.svelte';
-  import Flashcard from './Flashcard.svelte';
+  import FlashcardDeck from './FlashcardDeck.svelte';
+  import Test from './Test.svelte';
   import Modal from './Modal.svelte';
   import AddStudyMaterialModal from './AddStudyMaterialModal.svelte';
   import { readFile, deleteFile } from '../utils/fileUtils';
 
   export let id: string;
   export let name: string;
-  export let studyMaterials: Array<{ type: 'pdf' | 'markdown' | 'webpage', filePath?: string, fileName?: string, url?: string, name: string, content?: string }>;
-  export let reviewMaterials: Array<{ question: string, answer: string }>;
+  export let studyMaterials: StudyMaterial[];
+  export let reviewMaterials: Array<FlashcardDeck | TestData>;
 
   let viewingFile: { name: string, type: 'pdf' | 'markdown' | 'webpage', filePath?: string, content?: string, url?: string } | null = null;
-  let isAddMaterialModalOpen = false;
+  let isAddStudyMaterialModalOpen = false;
+  let isAddingDeck = false;
+  let newDeckName = '';
   let showAddFeedback = false;
   let addedMaterialsCount = 0;
 
@@ -30,13 +34,10 @@
     }
   }
 
-  async function handleViewFile(material: { name: string, type: 'pdf' | 'markdown' | 'webpage', filePath?: string, url?: string, content?: string }) {
-    console.log('handleViewFile called with material:', material);
+  async function handleViewFile(material: StudyMaterial) {
     if (material.type === 'markdown' && material.filePath && !material.content) {
       try {
-        console.log('Attempting to read file:', material.filePath);
         material.content = await readFile(material.filePath);
-        console.log('File content read:', material.content.substring(0, 100) + '...');
       } catch (error) {
         console.error('Error reading file:', error);
         alert('Failed to load file content. Please try again.');
@@ -44,10 +45,9 @@
       }
     }
     viewingFile = { ...material };
-    console.log('viewingFile set to:', viewingFile);
   }
 
-  async function handleRemoveFile(material: { name: string, type: 'pdf' | 'markdown' | 'webpage', filePath?: string, url?: string }) {
+  async function handleRemoveFile(material: StudyMaterial) {
     if (confirm(`Are you sure you want to remove "${material.name}"?`)) {
       try {
         if (material.filePath) {
@@ -66,15 +66,15 @@
     viewingFile = null;
   }
 
-  function openAddMaterialModal() {
-    isAddMaterialModalOpen = true;
+  function openAddStudyMaterialModal() {
+    isAddStudyMaterialModalOpen = true;
   }
 
-  function closeAddMaterialModal() {
-    isAddMaterialModalOpen = false;
+  function closeAddStudyMaterialModal() {
+    isAddStudyMaterialModalOpen = false;
   }
 
-  function handleMaterialsAdded(event: CustomEvent) {
+  function handleMaterialsAdded(event: CustomEvent<StudyMaterial[]>) {
     const newMaterials = event.detail;
     addedMaterialsCount = newMaterials.length;
     showAddFeedback = true;
@@ -86,6 +86,43 @@
     addStudyMaterials(id, newMaterials);
   }
 
+  function handleAddDeck() {
+    if (newDeckName.trim()) {
+      addFlashcardDeck(id, newDeckName.trim());
+      newDeckName = '';
+      isAddingDeck = false;
+    }
+  }
+
+  function handleRemoveDeck(deckId: string) {
+    if (confirm("Are you sure you want to remove this flashcard deck?")) {
+      removeFlashcardDeck(id, deckId);
+      reviewMaterials = reviewMaterials.filter(m => !('flashcards' in m) || m.id !== deckId);
+    }
+  }
+
+  function handleAddCardToDeck(event: CustomEvent<{ deckId: string, card: Flashcard }>) {
+    const { deckId, card } = event.detail;
+    addFlashcardToDeck(id, deckId, card);
+    reviewMaterials = reviewMaterials.map(m => {
+      if ('flashcards' in m && m.id === deckId) {
+        return { ...m, flashcards: [...m.flashcards, card] };
+      }
+      return m;
+    });
+  }
+
+  function handleRemoveCardFromDeck(event: CustomEvent<{ deckId: string, cardId: string }>) {
+    const { deckId, cardId } = event.detail;
+    removeFlashcardFromDeck(id, deckId, cardId);
+    reviewMaterials = reviewMaterials.map(m => {
+      if ('flashcards' in m && m.id === deckId) {
+        return { ...m, flashcards: m.flashcards.filter(card => card.id !== cardId) };
+      }
+      return m;
+    });
+  }
+
   function handleDelete() {
     if (confirm(`Are you sure you want to delete the collection "${name}"?`)) {
       deleteCollection(id);
@@ -94,7 +131,7 @@
 </script>
 
 <div class="bg-white dark:bg-gray-800 shadow-lg rounded-lg overflow-hidden">
-  <div class="flex justify-between items-center p-4 bg-gray-100 dark:bg-gray-700 text-text-light dark:text-text-dark">
+  <div class="flex justify-between items-center p-4 bg-gray-600 dark:bg-gray-700 text-text-dark dark:text-text-dark">
     <h2 class="text-2xl font-semibold truncate flex-grow">{name}</h2>
     <button
       on:click={handleDelete}
@@ -108,7 +145,7 @@
     <div class="flex justify-between items-center mb-4">
       <h3 class="text-xl font-semibold text-text-light dark:text-text-dark">Study Materials</h3>
       <button
-        on:click={openAddMaterialModal}
+        on:click={openAddStudyMaterialModal}
         class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
       >
         Add Study Material
@@ -147,11 +184,64 @@
     {/if}
   </div>
 
-  <div class="p-4 bg-gray-50 dark:bg-gray-600">
-    <h3 class="text-xl font-semibold mb-4 text-text-light dark:text-text-dark">Review Materials</h3>
-    {#each reviewMaterials as flashcard}
-      <Flashcard question={flashcard.question} answer={flashcard.answer} />
-    {/each}
+  <div class="p-4 bg-gray-600 dark:bg-gray-600">
+    <div class="flex justify-between items-center mb-4">
+      <h3 class="text-xl font-semibold text-text-dark dark:text-text-dark">Review Materials</h3>
+      <button
+        on:click={() => isAddingDeck = true}
+        class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
+      >
+        Add Flashcard Deck
+      </button>
+    </div>
+
+    {#if isAddingDeck}
+      <div class="mb-4 flex space-x-2">
+        <input
+          type="text"
+          bind:value={newDeckName}
+          placeholder="Deck Name"
+          class="flex-grow p-2 border rounded text-text-light"
+        />
+        <button
+          on:click={handleAddDeck}
+          class="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
+        >
+          Add Deck
+        </button>
+        <button
+          on:click={() => isAddingDeck = false}
+          class="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
+        >
+          Cancel
+        </button>
+      </div>
+    {/if}
+
+    {#if reviewMaterials.length > 0}
+      <div class="space-y-4">
+        {#each reviewMaterials as material (material.id)}
+          {#if 'flashcards' in material}
+            <FlashcardDeck
+              deck={material}
+              on:addCard={handleAddCardToDeck}
+              on:removeCard={handleRemoveCardFromDeck}
+            />
+            <button
+              on:click={() => handleRemoveDeck(material.id)}
+              class="mt-2 text-red-500 hover:text-red-700 focus:outline-none"
+              title="Remove Deck"
+            >
+              Remove Deck
+            </button>
+          {:else}
+            <Test {...material} />
+          {/if}
+        {/each}
+      </div>
+    {:else}
+      <p class="text-text-dark dark:text-text-dark">No review materials added yet.</p>
+    {/if}
   </div>
 </div>
 
@@ -160,7 +250,6 @@
     <div class="max-w-full overflow-x-auto">
       {#if viewingFile.type === 'markdown'}
         <div class="prose dark:prose-invert max-w-none">
-          {console.log('About to render markdown. Content:', viewingFile.content)}
           <MarkdownRenderer content={viewingFile.content || ''} />
         </div>
       {:else if viewingFile.type === 'webpage'}
@@ -173,9 +262,9 @@
 </Modal>
 
 <AddStudyMaterialModal 
-  isOpen={isAddMaterialModalOpen} 
+  isOpen={isAddStudyMaterialModalOpen} 
   collectionId={id} 
   name={name}
-  on:close={closeAddMaterialModal}
+  on:close={closeAddStudyMaterialModal}
   on:materialsAdded={handleMaterialsAdded}
 />

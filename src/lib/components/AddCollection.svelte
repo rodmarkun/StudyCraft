@@ -21,7 +21,7 @@
     />
     <button
       type="submit"
-      class="px-4 py-2 bg-primary-light dark:bg-primary-dark text-white rounded-r-md hover:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-primary-light dark:focus:ring-primary-dark"
+      class="px-4 py-2 bg-primary-dark dark:bg-primary-dark text-white rounded-r-md hover:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-primary-light dark:focus:ring-primary-dark"
     >
       Add Collection
     </button>
