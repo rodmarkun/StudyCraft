@@ -1,48 +1,48 @@
 <!-- src/lib/components/FlashcardDeck.svelte -->
 <script lang="ts">
-    import { createEventDispatcher } from 'svelte';
-    import type { FlashcardDeck, Flashcard } from '../stores/collections';
-  
-    export let deck: FlashcardDeck;
-  
-    const dispatch = createEventDispatcher();
-  
-    let isAddingCard = false;
-    let newQuestion = '';
-    let newAnswer = '';
-  
-    function addFlashcard() {
-      if (newQuestion.trim() && newAnswer.trim()) {
-        const newCard: Flashcard = {
-          id: Date.now().toString(),
-          question: newQuestion.trim(),
-          answer: newAnswer.trim()
-        };
-        dispatch('addCard', { deckId: deck.id, card: newCard });
-        newQuestion = '';
-        newAnswer = '';
-        isAddingCard = false;
-      }
-    }
-  
-    function removeFlashcard(cardId: string) {
-      dispatch('removeCard', { deckId: deck.id, cardId });
-    }
-  
-    function startAddingCard() {
-      isAddingCard = true;
-    }
-  
-    function cancelAddingCard() {
-      isAddingCard = false;
+  import { createEventDispatcher } from 'svelte';
+  import type { FlashcardDeck, Flashcard } from '../stores/collections';
+
+  export let deck: FlashcardDeck;
+
+  const dispatch = createEventDispatcher();
+
+  let isAddingCard = false;
+  let newQuestion = '';
+  let newAnswer = '';
+
+  function addFlashcard() {
+    if (newQuestion.trim() && newAnswer.trim()) {
+      const newCard: Flashcard = {
+        id: Date.now().toString(),
+        question: newQuestion.trim(),
+        answer: newAnswer.trim()
+      };
+      dispatch('addCard', { deckId: deck.id, card: newCard });
       newQuestion = '';
       newAnswer = '';
+      isAddingCard = false;
     }
-  </script>
-  
-  <div class="bg-white dark:bg-gray-800 shadow-lg rounded-lg p-4">
-    <h3 class="text-xl font-bold mb-4">{deck.name}</h3>
-    <p class="mb-4">Total cards: {deck.flashcards.length}</p>
+  }
+
+  function removeFlashcard(cardId: string) {
+    dispatch('removeCard', { deckId: deck.id, cardId });
+  }
+
+  function startAddingCard() {
+    isAddingCard = true;
+  }
+
+  function cancelAddingCard() {
+    isAddingCard = false;
+    newQuestion = '';
+    newAnswer = '';
+  }
+</script>
+
+<div class="bg-white dark:bg-gray-800 shadow-lg rounded-lg p-4">
+  <h3 class="text-xl font-bold mb-4">{deck.name}</h3>
+  <p class="mb-4">Total cards: {deck.flashcards.length}</p>
   
     {#if isAddingCard}
       <div class="mb-4 space-y-2">

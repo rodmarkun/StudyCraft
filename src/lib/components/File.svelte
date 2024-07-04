@@ -1,16 +1,12 @@
 <!-- src/lib/components/File.svelte -->
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
-
   export let fileName: string;
   export let fileType: 'pdf' | 'markdown';
-
   const dispatch = createEventDispatcher();
-
   function handleView() {
     dispatch('view', { fileName, fileType });
   }
-
   function handleRemove() {
     dispatch('remove', { fileName, fileType });
   }

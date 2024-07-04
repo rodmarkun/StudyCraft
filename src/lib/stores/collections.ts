@@ -19,11 +19,12 @@ export interface Flashcard {
 
 export interface FlashcardDeck {
   id: string;
-  name: string;
+  name: string; 
   flashcards: Flashcard[];
 }
 
 export interface TestData {
+  id: string;
   question: string;
   options: string[];
   correctOptionIndex: number;
@@ -72,16 +73,11 @@ export function removeStudyMaterial(collectionId: string, materialName: string) 
   });
 }
 
-export function addFlashcardDeck(collectionId: string, deckName: string) {
+export function addFlashcardDeck(collectionId: string, deck: FlashcardDeck) {
   collections.update(cols => {
-    const collectionIndex = cols.findIndex(col => col.id === collectionId);
-    if (collectionIndex !== -1) {
-      const newDeck: FlashcardDeck = {
-        id: Date.now().toString(),
-        name: deckName,
-        flashcards: []
-      };
-      cols[collectionIndex].reviewMaterials = [...cols[collectionIndex].reviewMaterials, newDeck];
+    const collection = cols.find(c => c.id === collectionId);
+    if (collection) {
+      collection.reviewMaterials = [...collection.reviewMaterials, deck];
     }
     return cols;
   });
@@ -125,6 +121,43 @@ export function removeFlashcardFromDeck(collectionId: string, deckId: string, fl
       if (deckIndex !== -1) {
         const deck = cols[collectionIndex].reviewMaterials[deckIndex] as FlashcardDeck;
         deck.flashcards = deck.flashcards.filter(card => card.id !== flashcardId);
+      }
+    }
+    return cols;
+  });
+}
+
+export function addTestQuestion(collectionId: string, testQuestion: TestData) {
+  collections.update(cols => {
+    const collectionIndex = cols.findIndex(col => col.id === collectionId);
+    if (collectionIndex !== -1) {
+      cols[collectionIndex].reviewMaterials = [...cols[collectionIndex].reviewMaterials, testQuestion];
+    }
+    return cols;
+  });
+}
+
+export function removeTestQuestion(collectionId: string, testQuestionId: string) {
+  collections.update(cols => {
+    const collectionIndex = cols.findIndex(col => col.id === collectionId);
+    if (collectionIndex !== -1) {
+      cols[collectionIndex].reviewMaterials = cols[collectionIndex].reviewMaterials.filter(
+        material => !('options' in material) || material.id !== testQuestionId
+      );
+    }
+    return cols;
+  });
+}
+
+export function updateTestQuestion(collectionId: string, updatedTestQuestion: TestData) {
+  collections.update(cols => {
+    const collectionIndex = cols.findIndex(col => col.id === collectionId);
+    if (collectionIndex !== -1) {
+      const testIndex = cols[collectionIndex].reviewMaterials.findIndex(
+        material => 'options' in material && material.id === updatedTestQuestion.id
+      );
+      if (testIndex !== -1) {
+        cols[collectionIndex].reviewMaterials[testIndex] = updatedTestQuestion;
       }
     }
     return cols;
