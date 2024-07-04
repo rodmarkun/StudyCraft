@@ -1,0 +1,41 @@
+{
+  "name": "studycraft",
+  "description": "An efficient solution to studying.",
+  "license": "MIT",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "main": "electron/main.cjs",
+  "scripts": {
+    "dev": "concurrently --kill-others \"vite\" \"npm run dev:electron\"",
+    "dev:vite": "vite",
+    "dev:electron": "cross-env DEV_ENV=true electron .",
+    "build": "vite build",
+    "preview": "vite preview",
+    "package": "npm run build && electron-forge package",
+    "make": "npm run build && electron-forge make"
+  },
+  "devDependencies": {
+    "@electron-forge/cli": "^6.1.1",
+    "@electron-forge/maker-deb": "^6.1.1",
+    "@electron-forge/maker-rpm": "^6.1.1",
+    "@electron-forge/maker-squirrel": "^6.1.1",
+    "@electron-forge/maker-zip": "^6.1.1",
+    "@sveltejs/vite-plugin-svelte": "^2.0.3",
+    "autoprefixer": "^10.4.14",
+    "concurrently": "^8.0.1",
+    "cross-env": "^7.0.3",
+    "electron": "^24.3.1",
+    "electron-reload": "^2.0.0-alpha.1",
+    "postcss": "^8.4.23",
+    "svelte": "^3.57.0",
+    "tailwindcss": "^3.3.2",
+    "vite": "^4.3.2"
+  },
+  "dependencies": {
+    "@types/marked": "^6.0.0",
+    "dompurify": "^3.1.5",
+    "electron-squirrel-startup": "^1.0.0",
+    "marked": "^13.0.1"
+  }
+}
