@@ -1,4 +1,3 @@
-// src/lib/stores/collections.ts
 import { writable } from 'svelte/store';
 import type { Writable } from 'svelte/store';
 
@@ -30,7 +29,13 @@ export interface TestData {
   correctOptionIndex: number;
 }
 
-export type ReviewMaterial = FlashcardDeck | TestData;
+export interface Test {
+  id: string;
+  name: string;
+  questions: TestData[];
+}
+
+export type ReviewMaterial = FlashcardDeck | Test;
 
 export interface Collection {
   id: string;
@@ -127,37 +132,37 @@ export function removeFlashcardFromDeck(collectionId: string, deckId: string, fl
   });
 }
 
-export function addTestQuestion(collectionId: string, testQuestion: TestData) {
+export function addTest(collectionId: string, test: Test) {
   collections.update(cols => {
     const collectionIndex = cols.findIndex(col => col.id === collectionId);
     if (collectionIndex !== -1) {
-      cols[collectionIndex].reviewMaterials = [...cols[collectionIndex].reviewMaterials, testQuestion];
+      cols[collectionIndex].reviewMaterials = [...cols[collectionIndex].reviewMaterials, test];
     }
     return cols;
   });
 }
 
-export function removeTestQuestion(collectionId: string, testQuestionId: string) {
+export function removeTest(collectionId: string, testId: string) {
   collections.update(cols => {
     const collectionIndex = cols.findIndex(col => col.id === collectionId);
     if (collectionIndex !== -1) {
       cols[collectionIndex].reviewMaterials = cols[collectionIndex].reviewMaterials.filter(
-        material => !('options' in material) || material.id !== testQuestionId
+        material => !('questions' in material) || material.id !== testId
       );
     }
     return cols;
   });
 }
 
-export function updateTestQuestion(collectionId: string, updatedTestQuestion: TestData) {
+export function updateTest(collectionId: string, updatedTest: Test) {
   collections.update(cols => {
     const collectionIndex = cols.findIndex(col => col.id === collectionId);
     if (collectionIndex !== -1) {
       const testIndex = cols[collectionIndex].reviewMaterials.findIndex(
-        material => 'options' in material && material.id === updatedTestQuestion.id
+        material => 'questions' in material && material.id === updatedTest.id
       );
       if (testIndex !== -1) {
-        cols[collectionIndex].reviewMaterials[testIndex] = updatedTestQuestion;
+        cols[collectionIndex].reviewMaterials[testIndex] = updatedTest;
       }
     }
     return cols;
