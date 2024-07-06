@@ -44,127 +44,212 @@ export interface Collection {
   reviewMaterials: ReviewMaterial[];
 }
 
-const initialCollections: Collection[] = [];
-
-export const collections: Writable<Collection[]> = writable(initialCollections);
-
-export function addCollection(name: string) {
-  collections.update(cols => [...cols, { id: Date.now().toString(), name, studyMaterials: [], reviewMaterials: [] }]);
+async function loadCollections(): Promise<Collection[]> {
+  try {
+    const content = await window.electronAPI.readFile('collections.json');
+    return JSON.parse(content);
+  } catch (error) {
+    console.error('Error loading collections:', error);
+    return [];
+  }
 }
 
-export function deleteCollection(id: string) {
-  collections.update(cols => cols.filter(col => col.id !== id));
+async function saveCollections(collections: Collection[]): Promise<void> {
+  try {
+    await window.electronAPI.saveFile(JSON.stringify(collections), 'collections.json', '');
+  } catch (error) {
+    console.error('Error saving collections:', error);
+  }
 }
 
-export function addStudyMaterials(collectionId: string, newMaterials: StudyMaterial[]) {
-  collections.update(cols => {
-    const collectionIndex = cols.findIndex(col => col.id === collectionId);
-    if (collectionIndex !== -1) {
-      cols[collectionIndex].studyMaterials = [...cols[collectionIndex].studyMaterials, ...newMaterials];
+function createCollectionsStore() {
+  const { subscribe, set, update } = writable<Collection[]>([]);
+
+  return {
+    subscribe,
+    initialize: async () => {
+      const loadedCollections = await loadCollections();
+      set(loadedCollections);
+    },
+    addCollection: async (name: string) => {
+      update(cols => {
+        const newCols = [...cols, { id: Date.now().toString(), name, studyMaterials: [], reviewMaterials: [] }];
+        saveCollections(newCols);
+        return newCols;
+      });
+    },
+    deleteCollection: async (id: string) => {
+      update(cols => {
+        const newCols = cols.filter(col => col.id !== id);
+        saveCollections(newCols);
+        return newCols;
+      });
+    },
+    addStudyMaterials: async (collectionId: string, newMaterials: StudyMaterial[]) => {
+      update(cols => {
+        const newCols = cols.map(col => {
+          if (col.id === collectionId) {
+            return { ...col, studyMaterials: [...col.studyMaterials, ...newMaterials] };
+          }
+          return col;
+        });
+        saveCollections(newCols);
+        return newCols;
+      });
+    },
+    removeStudyMaterial: async (collectionId: string, materialName: string) => {
+      update(cols => {
+        const newCols = cols.map(col => {
+          if (col.id === collectionId) {
+            return {
+              ...col,
+              studyMaterials: col.studyMaterials.filter(material => material.name !== materialName)
+            };
+          }
+          return col;
+        });
+        saveCollections(newCols);
+        return newCols;
+      });
+    },
+    addFlashcardDeck: async (collectionId: string, deck: FlashcardDeck) => {
+      update(cols => {
+        const newCols = cols.map(col => {
+          if (col.id === collectionId) {
+            return { ...col, reviewMaterials: [...col.reviewMaterials, deck] };
+          }
+          return col;
+        });
+        saveCollections(newCols);
+        return newCols;
+      });
+    },
+    removeFlashcardDeck: async (collectionId: string, deckId: string) => {
+      update(cols => {
+        const newCols = cols.map(col => {
+          if (col.id === collectionId) {
+            return {
+              ...col,
+              reviewMaterials: col.reviewMaterials.filter(
+                material => !('flashcards' in material) || material.id !== deckId
+              )
+            };
+          }
+          return col;
+        });
+        saveCollections(newCols);
+        return newCols;
+      });
+    },
+    addFlashcardToDeck: async (collectionId: string, deckId: string, flashcard: Flashcard) => {
+      update(cols => {
+        const newCols = cols.map(col => {
+          if (col.id === collectionId) {
+            return {
+              ...col,
+              reviewMaterials: col.reviewMaterials.map(material => {
+                if ('flashcards' in material && material.id === deckId) {
+                  return {
+                    ...material,
+                    flashcards: [...material.flashcards, flashcard]
+                  };
+                }
+                return material;
+              })
+            };
+          }
+          return col;
+        });
+        saveCollections(newCols);
+        return newCols;
+      });
+    },
+    removeFlashcardFromDeck: async (collectionId: string, deckId: string, flashcardId: string) => {
+      update(cols => {
+        const newCols = cols.map(col => {
+          if (col.id === collectionId) {
+            return {
+              ...col,
+              reviewMaterials: col.reviewMaterials.map(material => {
+                if ('flashcards' in material && material.id === deckId) {
+                  return {
+                    ...material,
+                    flashcards: material.flashcards.filter(card => card.id !== flashcardId)
+                  };
+                }
+                return material;
+              })
+            };
+          }
+          return col;
+        });
+        saveCollections(newCols);
+        return newCols;
+      });
+    },
+    addTest: async (collectionId: string, test: Test) => {
+      update(cols => {
+        const newCols = cols.map(col => {
+          if (col.id === collectionId) {
+            return { ...col, reviewMaterials: [...col.reviewMaterials, test] };
+          }
+          return col;
+        });
+        saveCollections(newCols);
+        return newCols;
+      });
+    },
+    removeTest: async (collectionId: string, testId: string) => {
+      update(cols => {
+        const newCols = cols.map(col => {
+          if (col.id === collectionId) {
+            return {
+              ...col,
+              reviewMaterials: col.reviewMaterials.filter(
+                material => !('questions' in material) || material.id !== testId
+              )
+            };
+          }
+          return col;
+        });
+        saveCollections(newCols);
+        return newCols;
+      });
+    },
+    updateTest: async (collectionId: string, updatedTest: Test) => {
+      update(cols => {
+        const newCols = cols.map(col => {
+          if (col.id === collectionId) {
+            return {
+              ...col,
+              reviewMaterials: col.reviewMaterials.map(material => 
+                'questions' in material && material.id === updatedTest.id ? updatedTest : material
+              )
+            };
+          }
+          return col;
+        });
+        saveCollections(newCols);
+        return newCols;
+      });
     }
-    return cols;
-  });
+  };
 }
 
-export function removeStudyMaterial(collectionId: string, materialName: string) {
-  collections.update(cols => {
-    const collectionIndex = cols.findIndex(col => col.id === collectionId);
-    if (collectionIndex !== -1) {
-      cols[collectionIndex].studyMaterials = cols[collectionIndex].studyMaterials.filter(
-        material => material.name !== materialName
-      );
-    }
-    return cols;
-  });
-}
+export const collections = createCollectionsStore();
 
-export function addFlashcardDeck(collectionId: string, deck: FlashcardDeck) {
-  collections.update(cols => {
-    const collection = cols.find(c => c.id === collectionId);
-    if (collection) {
-      collection.reviewMaterials = [...collection.reviewMaterials, deck];
-    }
-    return cols;
-  });
-}
+// Initialize the store when the app starts
+collections.initialize();
 
-export function removeFlashcardDeck(collectionId: string, deckId: string) {
-  collections.update(cols => {
-    const collectionIndex = cols.findIndex(col => col.id === collectionId);
-    if (collectionIndex !== -1) {
-      cols[collectionIndex].reviewMaterials = cols[collectionIndex].reviewMaterials.filter(
-        material => !('flashcards' in material) || material.id !== deckId
-      );
-    }
-    return cols;
-  });
-}
-
-export function addFlashcardToDeck(collectionId: string, deckId: string, flashcard: Flashcard) {
-  collections.update(cols => {
-    const collectionIndex = cols.findIndex(col => col.id === collectionId);
-    if (collectionIndex !== -1) {
-      const deckIndex = cols[collectionIndex].reviewMaterials.findIndex(
-        material => 'flashcards' in material && material.id === deckId
-      );
-      if (deckIndex !== -1) {
-        const deck = cols[collectionIndex].reviewMaterials[deckIndex] as FlashcardDeck;
-        deck.flashcards = [...deck.flashcards, flashcard];
-      }
-    }
-    return cols;
-  });
-}
-
-export function removeFlashcardFromDeck(collectionId: string, deckId: string, flashcardId: string) {
-  collections.update(cols => {
-    const collectionIndex = cols.findIndex(col => col.id === collectionId);
-    if (collectionIndex !== -1) {
-      const deckIndex = cols[collectionIndex].reviewMaterials.findIndex(
-        material => 'flashcards' in material && material.id === deckId
-      );
-      if (deckIndex !== -1) {
-        const deck = cols[collectionIndex].reviewMaterials[deckIndex] as FlashcardDeck;
-        deck.flashcards = deck.flashcards.filter(card => card.id !== flashcardId);
-      }
-    }
-    return cols;
-  });
-}
-
-export function addTest(collectionId: string, test: Test) {
-  collections.update(cols => {
-    const collectionIndex = cols.findIndex(col => col.id === collectionId);
-    if (collectionIndex !== -1) {
-      cols[collectionIndex].reviewMaterials = [...cols[collectionIndex].reviewMaterials, test];
-    }
-    return cols;
-  });
-}
-
-export function removeTest(collectionId: string, testId: string) {
-  collections.update(cols => {
-    const collectionIndex = cols.findIndex(col => col.id === collectionId);
-    if (collectionIndex !== -1) {
-      cols[collectionIndex].reviewMaterials = cols[collectionIndex].reviewMaterials.filter(
-        material => !('questions' in material) || material.id !== testId
-      );
-    }
-    return cols;
-  });
-}
-
-export function updateTest(collectionId: string, updatedTest: Test) {
-  collections.update(cols => {
-    const collectionIndex = cols.findIndex(col => col.id === collectionId);
-    if (collectionIndex !== -1) {
-      const testIndex = cols[collectionIndex].reviewMaterials.findIndex(
-        material => 'questions' in material && material.id === updatedTest.id
-      );
-      if (testIndex !== -1) {
-        cols[collectionIndex].reviewMaterials[testIndex] = updatedTest;
-      }
-    }
-    return cols;
-  });
-}
+// You can keep your existing function declarations, but they should now call the corresponding methods on the collections object
+export const addCollection = collections.addCollection;
+export const deleteCollection = collections.deleteCollection;
+export const addStudyMaterials = collections.addStudyMaterials;
+export const removeStudyMaterial = collections.removeStudyMaterial;
+export const addFlashcardDeck = collections.addFlashcardDeck;
+export const removeFlashcardDeck = collections.removeFlashcardDeck;
+export const addFlashcardToDeck = collections.addFlashcardToDeck;
+export const removeFlashcardFromDeck = collections.removeFlashcardFromDeck;
+export const addTest = collections.addTest;
+export const removeTest = collections.removeTest;
+export const updateTest = collections.updateTest;

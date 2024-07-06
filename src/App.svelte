@@ -6,6 +6,7 @@
 	import Collections from './lib/components/Collections.svelte';
 	import Modal from './lib/components/Modal.svelte';
 	import Calendar from './lib/components/Calendar.svelte';
+	import { collections } from './lib/stores/collections';
   
 	let darkMode = false;
 	let isCalendarModalOpen = false;
@@ -19,6 +20,7 @@
 	function toggleTheme() {
 	  darkMode = !darkMode;
 	  updateTheme();
+	  collections.initialize();
 	}
   
 	function updateTheme() {

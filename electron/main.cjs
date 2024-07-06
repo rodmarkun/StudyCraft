@@ -67,7 +67,9 @@ ipcMain.handle('saveFile', (event, content, fileName, collectionName) => {
   
   ipcMain.handle('readFile', (event, filePath) => {
     try {
-      const content = fs.readFileSync(filePath, 'utf-8');
+      const userDataPath = app.getPath('userData');
+      const trueFilePath = path.join(userDataPath, 'collections', filePath);
+      const content = fs.readFileSync(trueFilePath, 'utf-8');
       return content;
     } catch (error) {
       console.error('Error reading file:', error);
