@@ -29,7 +29,6 @@
   function handleInput(event: Event) {
     const target = event.target as HTMLInputElement;
     $newCollectionName = target.value;
-    console.log('Input value changed:', $newCollectionName);
   }
 </script>
 
@@ -49,5 +48,3 @@
     Add Collection
   </button>
 </form>
-
-<p>Current input value: {$newCollectionName}</p>
