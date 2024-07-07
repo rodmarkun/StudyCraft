@@ -173,7 +173,7 @@
     
     <StudyMaterialsList 
       {studyMaterials} 
-      {id} 
+      collectionId={id} 
       on:viewFile={handleViewFile} 
       on:removeStudyMaterial={handleRemoveStudyMaterial}
     />
@@ -234,7 +234,7 @@
 
     <ReviewMaterialsList 
       {reviewMaterials} 
-      {id} 
+      collectionId={id} 
       on:studyMaterial={handleStudyMaterial}
       on:editMaterial={handleEditMaterial}
       on:removeMaterial={handleRemoveMaterial}

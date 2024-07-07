@@ -68,7 +68,22 @@ ipcMain.handle('saveFile', (event, content, fileName, collectionName) => {
   ipcMain.handle('readFile', (event, filePath) => {
     try {
       const userDataPath = app.getPath('userData');
-      const trueFilePath = path.join(userDataPath, 'collections', filePath);
+      const collectionsPath = path.join(userDataPath, 'collections');
+      
+      let trueFilePath;
+      if (filePath.startsWith(userDataPath)) {
+        // If the filePath already includes the userData path, use it as is
+        trueFilePath = filePath;
+      } else {
+        // If not, append it to the collections path
+        trueFilePath = path.join(collectionsPath, filePath);
+      }
+  
+      // Ensure the file is within the userData directory (security measure)
+      if (!trueFilePath.startsWith(userDataPath)) {
+        throw new Error('Access denied: Attempting to read file outside of userData directory');
+      }
+  
       const content = fs.readFileSync(trueFilePath, 'utf-8');
       return content;
     } catch (error) {

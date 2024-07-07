@@ -19,14 +19,11 @@
 
   $: {
     if (content) {
-      console.log('Raw content:', content);
       const rawHtml = marked.parse(content);
-      console.log('Parsed HTML:', rawHtml);
       renderedContent = DOMPurify.sanitize(rawHtml, { 
         USE_PROFILES: { html: true },
         ADD_TAGS: ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li']
       });
-      console.log('Sanitized HTML:', renderedContent);
     } else {
       renderedContent = '';
     }

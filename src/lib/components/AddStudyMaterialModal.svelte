@@ -3,6 +3,7 @@
   import { createEventDispatcher } from 'svelte';
   import Modal from './Modal.svelte';
   import { saveFile } from '../utils/fileUtils';
+  import type { StudyMaterial } from '../stores/collections';
 
   export let isOpen = false;
   export let collectionId: string;
@@ -46,20 +47,19 @@
   async function handleSubmit() {
     try {
       errorMessage = '';
-      const processedMaterials = await Promise.all(materials.map(async (m) => {
+      const processedMaterials: StudyMaterial[] = await Promise.all(materials.map(async (m) => {
         if (m.type === 'markdown' && m.file) {
           const content = await m.file.text();
           const filePath = await saveFile(content, m.name, name);
-          return { ...m, filePath, content };
+          return { type: 'markdown', filePath, name: m.name };
         } else if (m.type === 'webpage' && m.url) {
-          // Handle webpage saving here if needed
           if (!isValidUrl(m.url)) {
             throw new Error(`Invalid URL: ${m.url}`);
           }
-          return m;
+          return { type: 'webpage', url: m.url, name: m.name };
         } else if (m.type === 'pdf' && m.file) {
-          // Handle PDF saving if needed
-          return m;
+          const filePath = await saveFile(await m.file.arrayBuffer(), m.name, name);
+          return { type: 'pdf', filePath, name: m.name };
         }
         throw new Error(`Invalid material type or missing required data for ${m.name || 'unnamed material'}`);
       }));
@@ -67,7 +67,7 @@
       const validMaterials = processedMaterials.filter(m => 
         (m.type === 'markdown' && m.filePath) || 
         (m.type === 'webpage' && m.url) || 
-        (m.type === 'pdf' && m.file)
+        (m.type === 'pdf' && m.filePath)
       );
       
       if (validMaterials.length === 0) {

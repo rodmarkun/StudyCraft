@@ -1,53 +1,56 @@
 <script lang="ts">
-    import { createEventDispatcher } from 'svelte';
-    import type { StudyMaterial } from '../stores/collections';
-    import { readFile, deleteFile } from '../utils/fileUtils';
-  
-    export let studyMaterials: StudyMaterial[];
-    export let collectionId: string;
-  
-    const dispatch = createEventDispatcher();
-  
-    function getIcon(type: 'pdf' | 'markdown' | 'webpage') {
-      switch (type) {
-        case 'pdf':
-          return '📄';
-        case 'markdown':
-          return '📝';
-        case 'webpage':
-          return '🌐';
-        default:
-          return '📎';
-      }
+  import { createEventDispatcher } from 'svelte';
+  import type { StudyMaterial } from '../stores/collections';
+  import { loadStudyMaterialContent } from '../stores/collections';
+  import { deleteFile } from '../utils/fileUtils';
+
+  export let studyMaterials: StudyMaterial[];
+  export let collectionId: string;
+
+  const dispatch = createEventDispatcher();
+
+  function getIcon(type: 'pdf' | 'markdown' | 'webpage') {
+    switch (type) {
+      case 'pdf':
+        return '📄';
+      case 'markdown':
+        return '📝';
+      case 'webpage':
+        return '🌐';
+      default:
+        return '📎';
     }
-  
-    async function handleViewFile(material: StudyMaterial) {
-      if (material.type === 'markdown' && material.filePath && !material.content) {
-        try {
-          material.content = await readFile(material.filePath);
-        } catch (error) {
-          console.error('Error reading file:', error);
-          alert('Failed to load file content. Please try again.');
-          return;
+  }
+
+  async function handleViewFile(material: StudyMaterial) {
+    if (material.type === 'markdown' && material.filePath) {
+      try {
+        console.log(material.filePath)
+        const content = await loadStudyMaterialContent(material.filePath);
+        dispatch('viewFile', { ...material, content });
+      } catch (error) {
+        console.error('Error reading file:', error);
+        alert('Failed to load file content. Please try again.');
+      }
+    } else {
+      dispatch('viewFile', material);
+    }
+  }
+
+  async function handleRemoveFile(material: StudyMaterial) {
+    if (confirm(`Are you sure you want to remove "${material.name}"?`)) {
+      try {
+        if (material.filePath) {
+          await deleteFile(material.filePath);
         }
-      }
-      dispatch('viewFile', { ...material });
-    }
-  
-    async function handleRemoveFile(material: StudyMaterial) {
-      if (confirm(`Are you sure you want to remove "${material.name}"?`)) {
-        try {
-          if (material.filePath) {
-            await deleteFile(material.filePath);
-          }
-          dispatch('removeStudyMaterial', { collectionId, materialName: material.name });
-        } catch (error) {
-          console.error('Error deleting file:', error);
-          alert(`There was an error deleting the file: ${error.message}`);
-        }
+        dispatch('removeStudyMaterial', { collectionId, materialName: material.name });
+      } catch (error) {
+        console.error('Error deleting file:', error);
+        alert(`There was an error deleting the file: ${error.message}`);
       }
     }
-  </script>
+  }
+</script>
   
   <div class="space-y-2">
     {#each studyMaterials as material (material.id)}

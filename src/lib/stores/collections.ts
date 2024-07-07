@@ -7,7 +7,6 @@ export interface StudyMaterial {
   fileName?: string;
   url?: string;
   name: string;
-  content?: string;
 }
 
 export interface Flashcard {
@@ -237,6 +236,15 @@ function createCollectionsStore() {
 }
 
 export const collections = createCollectionsStore();
+
+export async function loadStudyMaterialContent(filePath: string): Promise<string> {
+  try {
+    return await window.electronAPI.readFile(filePath);
+  } catch (error) {
+    console.error('Error loading study material content:', error);
+    throw error;
+  }
+}
 
 // Initialize the store when the app starts
 collections.initialize();
