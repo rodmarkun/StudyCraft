@@ -102,6 +102,35 @@ ipcMain.handle('saveFile', (event, content, fileName, collectionName) => {
     }
   });
 
+  ipcMain.handle('saveStudySession', (event, session) => {
+    const userDataPath = app.getPath('userData');
+    const sessionsPath = path.join(userDataPath, 'studySessions.json');
+    
+    let sessions = [];
+    if (fs.existsSync(sessionsPath)) {
+      const content = fs.readFileSync(sessionsPath, 'utf-8');
+      sessions = JSON.parse(content);
+    }
+    
+    sessions.push(session);
+    fs.writeFileSync(sessionsPath, JSON.stringify(sessions));
+    
+    return true;
+  });
+  
+  ipcMain.handle('loadStudySessions', () => {
+    const userDataPath = app.getPath('userData');
+    const sessionsPath = path.join(userDataPath, 'studySessions.json');
+    
+    if (fs.existsSync(sessionsPath)) {
+      const content = fs.readFileSync(sessionsPath, 'utf-8');
+      return JSON.parse(content);
+    }
+    
+    return [];
+  });
+  
+
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.

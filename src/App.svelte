@@ -7,6 +7,8 @@
 	import Modal from './lib/components/Modal.svelte';
 	import Calendar from './lib/components/Calendar.svelte';
 	import { collections } from './lib/stores/collections';
+	import logoLight from './assets/StudyCraftLogo2Transparente.png';
+    import logoDark from './assets/StudyCraftLogo2TransparenteInv.png';
   
 	let darkMode = false;
 	let isCalendarModalOpen = false;
@@ -46,12 +48,13 @@
   </script>
   
   <div class="min-h-screen bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark transition-colors duration-300 font-body">
-	<nav class="bg-white dark:bg-gray-800 shadow-md">
-	  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-		<div class="flex justify-between items-center h-16">
-		  <div class="flex-shrink-0 flex items-center">
-			<span class="text-2xl font-bold text-text-light dark:text-text-dark font-header">StudyCraft</span>
-		  </div>
+    <nav class="bg-white dark:bg-gray-800 shadow-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex-shrink-0 flex items-center space-x-2">
+                    <img src={darkMode ? logoDark : logoLight}  alt="StudyCraft Logo" class="h-8 w-auto" /> <!-- Add the logo here -->
+                    <span class="text-2xl font-bold text-text-light dark:text-text-dark font-header">StudyCraft</span>
+                </div>
 		  <div class="flex-grow flex justify-center items-center">
 			<StudyTimer />
 		  </div>
