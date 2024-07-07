@@ -25,7 +25,6 @@
   async function handleViewFile(material: StudyMaterial) {
     if (material.type === 'markdown' && material.filePath) {
       try {
-        console.log(material.filePath)
         const content = await loadStudyMaterialContent(material.filePath);
         dispatch('viewFile', { ...material, content });
       } catch (error) {

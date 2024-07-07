@@ -275,6 +275,7 @@
 <EditDeckModal
   deck={editingDeck}
   isOpen={editingDeck !== null}
+  collectionId={id} 
   on:close={closeEditDeck}
   on:update={handleDeckUpdate}
 />

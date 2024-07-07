@@ -48,7 +48,7 @@ async function loadCollections(): Promise<Collection[]> {
     const content = await window.electronAPI.readFile('collections.json');
     return JSON.parse(content);
   } catch (error) {
-    console.error('Error loading collections:', error);
+    console.log('No collections found, returning empty array');
     return [];
   }
 }
@@ -86,27 +86,25 @@ function createCollectionsStore() {
     },
     addStudyMaterials: async (collectionId: string, newMaterials: StudyMaterial[]) => {
       update(cols => {
-        const newCols = cols.map(col => {
-          if (col.id === collectionId) {
-            return { ...col, studyMaterials: [...col.studyMaterials, ...newMaterials] };
-          }
-          return col;
-        });
+        const newCols = cols.map(col => 
+          col.id === collectionId 
+            ? { ...col, studyMaterials: [...col.studyMaterials, ...newMaterials.map(m => ({...m}))] }
+            : col
+        );
         saveCollections(newCols);
         return newCols;
       });
     },
     removeStudyMaterial: async (collectionId: string, materialName: string) => {
       update(cols => {
-        const newCols = cols.map(col => {
-          if (col.id === collectionId) {
-            return {
-              ...col,
-              studyMaterials: col.studyMaterials.filter(material => material.name !== materialName)
-            };
-          }
-          return col;
-        });
+        const newCols = cols.map(col => 
+          col.id === collectionId
+            ? { 
+                ...col, 
+                studyMaterials: col.studyMaterials.filter(material => material.name !== materialName)
+              }
+            : col
+        );
         saveCollections(newCols);
         return newCols;
       });
@@ -115,119 +113,127 @@ function createCollectionsStore() {
       update(cols => {
         const newCols = cols.map(col => {
           if (col.id === collectionId) {
-            return { ...col, reviewMaterials: [...col.reviewMaterials, deck] };
+            const existingDeckIndex = col.reviewMaterials.findIndex(
+              (material): material is FlashcardDeck => 
+                'flashcards' in material && material.id === deck.id
+            );
+
+            if (existingDeckIndex !== -1) {
+              // Update existing deck
+              return {
+                ...col,
+                reviewMaterials: col.reviewMaterials.map((material, index) =>
+                  index === existingDeckIndex 
+                    ? {...deck, flashcards: deck.flashcards.map(card => ({...card}))}
+                    : material
+                )
+              };
+            } else {
+              // Add new deck
+              return { 
+                ...col, 
+                reviewMaterials: [...col.reviewMaterials, {...deck, flashcards: deck.flashcards.map(card => ({...card}))}]
+              };
+            }
           }
           return col;
         });
+        console.log('Saving collections:', JSON.stringify(newCols, null, 2));
         saveCollections(newCols);
         return newCols;
+      });
+    },
+    updateFlashcardDeck: async (collectionId: string, updatedDeck: FlashcardDeck) => {
+      update(cols => {
+        try {
+          const newCols = cols.map(col => {
+            if (col.id === collectionId) {
+              const newReviewMaterials = col.reviewMaterials.map(material => {
+                if ('flashcards' in material && material.id === updatedDeck.id) {
+                  return {
+                    ...updatedDeck,
+                    flashcards: updatedDeck.flashcards.map(card => ({...card}))
+                  };
+                }
+                return material;
+              });    
+              return {
+                ...col,
+                reviewMaterials: newReviewMaterials
+              };
+            }
+            return col;
+          });
+          saveCollections(newCols);
+          return newCols;
+        } catch (error) {
+          return cols; // Return original state if there's an error
+        }
       });
     },
     removeFlashcardDeck: async (collectionId: string, deckId: string) => {
       update(cols => {
-        const newCols = cols.map(col => {
-          if (col.id === collectionId) {
-            return {
-              ...col,
-              reviewMaterials: col.reviewMaterials.filter(
-                material => !('flashcards' in material) || material.id !== deckId
-              )
-            };
-          }
-          return col;
-        });
-        saveCollections(newCols);
-        return newCols;
-      });
-    },
-    addFlashcardToDeck: async (collectionId: string, deckId: string, flashcard: Flashcard) => {
-      update(cols => {
-        const newCols = cols.map(col => {
-          if (col.id === collectionId) {
-            return {
-              ...col,
-              reviewMaterials: col.reviewMaterials.map(material => {
-                if ('flashcards' in material && material.id === deckId) {
-                  return {
-                    ...material,
-                    flashcards: [...material.flashcards, flashcard]
-                  };
-                }
-                return material;
-              })
-            };
-          }
-          return col;
-        });
-        saveCollections(newCols);
-        return newCols;
-      });
-    },
-    removeFlashcardFromDeck: async (collectionId: string, deckId: string, flashcardId: string) => {
-      update(cols => {
-        const newCols = cols.map(col => {
-          if (col.id === collectionId) {
-            return {
-              ...col,
-              reviewMaterials: col.reviewMaterials.map(material => {
-                if ('flashcards' in material && material.id === deckId) {
-                  return {
-                    ...material,
-                    flashcards: material.flashcards.filter(card => card.id !== flashcardId)
-                  };
-                }
-                return material;
-              })
-            };
-          }
-          return col;
-        });
+        const newCols = cols.map(col => 
+          col.id === collectionId
+            ? {
+                ...col,
+                reviewMaterials: col.reviewMaterials.filter(material => 
+                  !('flashcards' in material) || material.id !== deckId
+                )
+              }
+            : col
+        );
         saveCollections(newCols);
         return newCols;
       });
     },
     addTest: async (collectionId: string, test: Test) => {
       update(cols => {
-        const newCols = cols.map(col => {
-          if (col.id === collectionId) {
-            return { ...col, reviewMaterials: [...col.reviewMaterials, test] };
-          }
-          return col;
-        });
+        const newCols = cols.map(col => 
+          col.id === collectionId
+            ? { 
+                ...col, 
+                reviewMaterials: [
+                  ...col.reviewMaterials, 
+                  {...test, questions: test.questions.map(q => ({...q}))}
+                ] 
+              }
+            : col
+        );
         saveCollections(newCols);
         return newCols;
       });
     },
     removeTest: async (collectionId: string, testId: string) => {
       update(cols => {
-        const newCols = cols.map(col => {
-          if (col.id === collectionId) {
-            return {
-              ...col,
-              reviewMaterials: col.reviewMaterials.filter(
-                material => !('questions' in material) || material.id !== testId
-              )
-            };
-          }
-          return col;
-        });
+        const newCols = cols.map(col => 
+          col.id === collectionId
+            ? {
+                ...col,
+                reviewMaterials: col.reviewMaterials.filter(material => 
+                  !('questions' in material) || material.id !== testId
+                )
+              }
+            : col
+        );
         saveCollections(newCols);
         return newCols;
       });
     },
     updateTest: async (collectionId: string, updatedTest: Test) => {
       update(cols => {
-        const newCols = cols.map(col => {
-          if (col.id === collectionId) {
-            return {
-              ...col,
-              reviewMaterials: col.reviewMaterials.map(material => 
-                'questions' in material && material.id === updatedTest.id ? updatedTest : material
-              )
-            };
-          }
-          return col;
-        });
+        const newCols = cols.map(col => 
+          col.id === collectionId
+            ? {
+                ...col,
+                reviewMaterials: col.reviewMaterials.map(material => 
+                  'questions' in material && material.id === updatedTest.id
+                    ? {...updatedTest, questions: updatedTest.questions.map(q => ({...q}))}
+                    : material
+                )
+              }
+            : col
+        );
         saveCollections(newCols);
         return newCols;
       });
@@ -256,8 +262,7 @@ export const addStudyMaterials = collections.addStudyMaterials;
 export const removeStudyMaterial = collections.removeStudyMaterial;
 export const addFlashcardDeck = collections.addFlashcardDeck;
 export const removeFlashcardDeck = collections.removeFlashcardDeck;
-export const addFlashcardToDeck = collections.addFlashcardToDeck;
-export const removeFlashcardFromDeck = collections.removeFlashcardFromDeck;
 export const addTest = collections.addTest;
 export const removeTest = collections.removeTest;
 export const updateTest = collections.updateTest;
+export const updateFlashcardDeck = collections.updateFlashcardDeck;
