@@ -104,14 +104,6 @@
     editingDeck = null;
   }
 
-  function closeStudyTest() {
-    studyingTestQuestions = null;
-  }
-
-  function closeEditTest() {
-    editingTestQuestions = null;
-  }
-
   function handleDeckUpdate(event: CustomEvent<FlashcardDeck>) {
     const updatedDeck = event.detail;
     reviewMaterials = reviewMaterials.map(m => 
@@ -152,6 +144,7 @@
       ('questions' in m && m.id === updatedTest.id) ? updatedTest : m
     );
   }
+  
 </script>
 
 <div class="bg-white dark:bg-gray-800 shadow-lg rounded-lg overflow-hidden">
@@ -249,10 +242,13 @@
         <div class="prose dark:prose-invert max-w-none">
           <MarkdownRenderer content={viewingFile.content || ''} />
         </div>
-      {:else if viewingFile.type === 'webpage'}
-        <p>Webpage content viewer not implemented yet.</p>
       {:else if viewingFile.type === 'pdf'}
         <p>PDF viewer not implemented yet.</p>
+      {:else if viewingFile.type === 'webpage'}
+        <p>This is a webpage. Please click on the link to open it in a new tab.</p>
+        <a href={viewingFile.url} target="_blank" rel="noopener noreferrer" class="text-blue-500 hover:underline">
+          Open webpage
+        </a>
       {/if}
     </div>
   {/if}

@@ -42,13 +42,12 @@
       type="text"
       bind:value={editedTest.name}
       placeholder="Test Name"
-      class="w-full p-2 mb-4 border rounded"
+      class="w-full p-2 mb-4 border rounded text-black"
     />
-
     <h3 class="text-xl font-bold mb-2">Questions</h3>
     {#each editedTest.questions as question, index}
       <div class="mb-4 p-2 bg-gray-100 rounded">
-        <p class="font-bold">{question.question}</p>
+        <p class="font-bold text-black">{question.question}</p>
         <button
           class="mt-2 px-2 py-1 text-sm bg-red-500 text-white rounded hover:bg-red-600"
           on:click={() => removeQuestion(index)}
@@ -57,13 +56,12 @@
         </button>
       </div>
     {/each}
-
     <h3 class="text-xl font-bold mb-2">Add New Question</h3>
     <input
       type="text"
       bind:value={newQuestion.question}
       placeholder="Question"
-      class="w-full p-2 mb-2 border rounded"
+      class="w-full p-2 mb-2 border rounded text-black"
     />
     {#each newQuestion.options as option, index}
       <div class="flex mb-2">
@@ -71,7 +69,7 @@
           type="text"
           bind:value={newQuestion.options[index]}
           placeholder={`Option ${index + 1}`}
-          class="flex-grow p-2 border rounded-l"
+          class="flex-grow p-2 border rounded-l text-black"
         />
         <button
           class="px-4 py-2 bg-blue-500 text-white rounded-r"
@@ -88,7 +86,6 @@
     >
       Add Question
     </button>
-
     <div class="mt-4 flex justify-end space-x-2">
       <button
         class="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"

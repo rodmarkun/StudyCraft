@@ -44,7 +44,7 @@
         <div class="space-y-2">
           {#each currentQuestion.options as option, index}
             <button
-              class="w-full p-2 text-left bg-gray-100 hover:bg-gray-200 rounded"
+              class="w-full p-2 text-left bg-gray-100 hover:bg-gray-200 rounded text-black"
               on:click={() => handleAnswer(index)}
             >
               {option}

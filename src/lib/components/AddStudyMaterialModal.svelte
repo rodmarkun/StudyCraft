@@ -11,12 +11,12 @@
 
   const dispatch = createEventDispatcher();
 
-  let materials = [{ type: 'markdown', file: null, url: '', convertToMarkdown: false, name: '' }];
+  let materials = [{ type: 'markdown', file: null, url: '', name: '' }];
   let errorMessage = '';
   let uploadedFiles = new Set();
 
   function addMaterial() {
-    materials = [...materials, { type: 'markdown', file: null, url: '', convertToMarkdown: false, name: '' }];
+    materials = [...materials, { type: 'markdown', file: null, url: '', name: '' }];
   }
 
   function removeMaterial(index: number) {
@@ -48,18 +48,19 @@
     try {
       errorMessage = '';
       const processedMaterials: StudyMaterial[] = await Promise.all(materials.map(async (m) => {
+        const id = Date.now().toString() + Math.random().toString(36).substr(2, 9);
         if (m.type === 'markdown' && m.file) {
           const content = await m.file.text();
           const filePath = await saveFile(content, m.name, name);
-          return { type: 'markdown', filePath, name: m.name };
+          return { id, type: 'markdown', filePath, name: m.name };
         } else if (m.type === 'webpage' && m.url) {
           if (!isValidUrl(m.url)) {
             throw new Error(`Invalid URL: ${m.url}`);
           }
-          return { type: 'webpage', url: m.url, name: m.name };
+          return { id, type: 'webpage', url: m.url, name: m.url };
         } else if (m.type === 'pdf' && m.file) {
           const filePath = await saveFile(await m.file.arrayBuffer(), m.name, name);
-          return { type: 'pdf', filePath, name: m.name };
+          return { id, type: 'pdf', filePath, name: m.name };
         }
         throw new Error(`Invalid material type or missing required data for ${m.name || 'unnamed material'}`);
       }));
@@ -83,7 +84,7 @@
   }
 
   function close() {
-    materials = [{ type: 'markdown', file: null, url: '', convertToMarkdown: false, name: '' }];
+    materials = [{ type: 'markdown', file: null, url: '', name: '' }];
     errorMessage = '';
     uploadedFiles.clear();
     dispatch('close');
@@ -133,10 +134,6 @@
           placeholder="https://example.com"
           class="w-full p-2 mb-2 border rounded text-gray-900 dark:text-white bg-white dark:bg-gray-700"
         />
-        <label class="inline-flex items-center">
-          <input type="checkbox" bind:checked={material.convertToMarkdown} class="form-checkbox" />
-          <span class="ml-2 text-gray-900 dark:text-white">Convert to Markdown</span>
-        </label>
       {/if}
 
       {#if index > 0}
