@@ -3,7 +3,7 @@
   import { createEventDispatcher } from 'svelte';
   import type { FlashcardDeck, Flashcard } from '../stores/collections';
   import Modal from './Modal.svelte';
-  import { Brain } from 'lucide-svelte';
+  import LLMExplanation from './LLMExplanation.svelte';
 
   export let deck: FlashcardDeck | null;
   export let isOpen: boolean;
@@ -13,8 +13,6 @@
   let currentIndex = 0;
   let showAnswer = false;
   let shuffledCards: Flashcard[] = [];
-  let explanation = '';
-  let loadingExplanation = false;
 
   $: if (deck) {
     shuffledCards = [...deck.flashcards];
@@ -24,14 +22,12 @@
   function resetStudy() {
     currentIndex = 0;
     showAnswer = false;
-    explanation = '';
   }
 
   function nextCard() {
     if (currentIndex < shuffledCards.length - 1) {
       currentIndex++;
       showAnswer = false;
-      explanation = '';
     }
   }
 
@@ -39,15 +35,11 @@
     if (currentIndex > 0) {
       currentIndex--;
       showAnswer = false;
-      explanation = '';
     }
   }
 
   function toggleAnswer() {
     showAnswer = !showAnswer;
-    if (!showAnswer) {
-      explanation = '';
-    }
   }
 
   function shuffleDeck() {
@@ -56,38 +48,6 @@
       .sort((a, b) => a.sort - b.sort)
       .map(({ value }) => value);
     resetStudy();
-  }
-
-  async function askForExplanation() {
-    const currentCard = shuffledCards[currentIndex];
-    const prompt = `Please explain the following answer to the question "${currentCard.question}": ${currentCard.answer}`;
-    
-    loadingExplanation = true;
-    try {
-      const response = await fetch("http://localhost:11434/api/generate", {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          "model": "llama3",
-          "prompt": prompt,
-          "stream": false
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Network response was not ok');
-      }
-
-      const data = await response.json();
-      explanation = data.response;
-    } catch (error) {
-      console.error('Error fetching explanation:', error);
-      explanation = "Sorry, I couldn't fetch an explanation at this time.";
-    } finally {
-      loadingExplanation = false;
-    }
   }
 
   function close() {
@@ -108,22 +68,10 @@
           <p class="text-lg text-gray-700 dark:text-gray-300">
             {shuffledCards[currentIndex].answer}
           </p>
-          <div class="mt-4 flex justify-end">
-            <button
-              on:click={askForExplanation}
-              class="flex items-center px-4 py-2 bg-purple-500 text-white rounded-full hover:bg-purple-600 transition-colors duration-200"
-              disabled={loadingExplanation}
-            >
-              <Brain class="mr-2" size={20} />
-              {loadingExplanation ? 'Thinking...' : 'Ask for Explanation'}
-            </button>
-          </div>
-          {#if explanation}
-            <div class="mt-4 p-4 bg-gray-100 dark:bg-gray-700 rounded-lg">
-              <h4 class="text-lg font-semibold mb-2 text-gray-800 dark:text-white">Explanation:</h4>
-              <p class="text-gray-700 dark:text-gray-300">{explanation}</p>
-            </div>
-          {/if}
+          <LLMExplanation 
+            question={shuffledCards[currentIndex].question}
+            answer={shuffledCards[currentIndex].answer}
+          />
         {/if}
       </div>
       <button

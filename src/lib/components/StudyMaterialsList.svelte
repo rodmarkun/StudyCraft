@@ -24,7 +24,14 @@
   }
 
   async function handleViewFile(material: StudyMaterial) {
-    if (material.type === 'markdown' && material.filePath) {
+    if (material.type === 'pdf' && material.filePath) {
+      try {
+        await window.electronAPI.openFile(material.filePath);
+      } catch (error) {
+        console.error('Error opening PDF:', error);
+        alert('Failed to open PDF file. Please try again.');
+      }
+    } else if (material.type === 'markdown' && material.filePath) {
       try {
         const content = await loadStudyMaterialContent(material.filePath);
         dispatch('viewFile', { ...material, content });

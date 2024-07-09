@@ -18,5 +18,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   saveStudySession: (session) =>
     ipcRenderer.invoke('saveStudySession', session),
   loadStudySessions: () =>
-    ipcRenderer.invoke('loadStudySessions')
+    ipcRenderer.invoke('loadStudySessions'),
+  openFile: (filePath) => ipcRenderer.invoke('openFile', filePath),
 });

@@ -1,6 +1,6 @@
 // Modules to control application life and create native browser window
 const { log } = require('console');
-const { app, BrowserWindow, ipcMain } = require('electron');
+const { app, BrowserWindow, ipcMain, shell } = require('electron');
 const path = require('path');
 const fs = require('fs');
 
@@ -52,18 +52,25 @@ const createWindow = () => {
 }
 
 ipcMain.handle('saveFile', (event, content, fileName, collectionName) => {
-    const userDataPath = app.getPath('userData');
-    const collectionPath = path.join(userDataPath, 'collections', collectionName);
-    
-    if (!fs.existsSync(collectionPath)) {
-      fs.mkdirSync(collectionPath, { recursive: true });
-    }
-    
-    const filePath = path.join(collectionPath, fileName);
-    fs.writeFileSync(filePath, content);
-    
-    return filePath;
-  });
+  const userDataPath = app.getPath('userData');
+  const collectionPath = path.join(userDataPath, 'collections', collectionName);
+  
+  if (!fs.existsSync(collectionPath)) {
+    fs.mkdirSync(collectionPath, { recursive: true });
+  }
+  
+  const filePath = path.join(collectionPath, fileName);
+  
+  if (content instanceof ArrayBuffer) {
+    // Handle binary data (e.g., PDF)
+    fs.writeFileSync(filePath, Buffer.from(content));
+  } else {
+    // Handle text data (e.g., Markdown)
+    fs.writeFileSync(filePath, content, 'utf-8');
+  }
+  
+  return filePath;
+});
   
   ipcMain.handle('readFile', (event, filePath) => {
     try {
@@ -100,6 +107,10 @@ ipcMain.handle('saveFile', (event, content, fileName, collectionName) => {
       console.error('Error deleting file:', error);
       throw error;
     }
+  });
+
+  ipcMain.handle('openFile', (event, filePath) => {
+    shell.openPath(filePath);
   });
 
   ipcMain.handle('saveStudySession', (event, session) => {
