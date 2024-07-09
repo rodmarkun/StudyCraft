@@ -29,6 +29,8 @@
   let isAddingReviewMaterial = false;
   let reviewMaterialType: 'deck' | 'test' = 'deck';
   let newMaterialName = '';
+  let isDragging = false;
+  let dragCounter = 0;
 
   function handleDeleteCollection() {
     deleteCollection(id);
@@ -42,7 +44,7 @@
     isAddStudyMaterialModalOpen = false;
   }
 
-  function handleMaterialsAdded(event: CustomEvent<StudyMaterial[]>) {
+  async function handleMaterialsAdded(event: CustomEvent<StudyMaterial[]>) {
     const newMaterials = event.detail;
     addedMaterialsCount = newMaterials.length;
     showAddFeedback = true;
@@ -51,7 +53,7 @@
     }, 3000);
     
     studyMaterials = [...studyMaterials, ...newMaterials];
-    addStudyMaterials(id, newMaterials);
+    await addStudyMaterials(id, newMaterials);
   }
 
   function handleViewFile(event: CustomEvent<StudyMaterial>) {
@@ -144,13 +146,70 @@
       ('questions' in m && m.id === updatedTest.id) ? updatedTest : m
     );
   }
-  
+
+  function handleDragEnter(event: DragEvent) {
+    event.preventDefault();
+    dragCounter++;
+    isDragging = true;
+  }
+
+  function handleDragLeave(event: DragEvent) {
+    event.preventDefault();
+    dragCounter--;
+    if (dragCounter === 0) {
+      isDragging = false;
+    }
+  }
+
+  function handleDragOver(event: DragEvent) {
+    event.preventDefault();
+    event.dataTransfer!.dropEffect = 'copy';
+  }
+
+  async function handleDrop(event: DragEvent) {
+    event.preventDefault();
+    isDragging = false;
+    dragCounter = 0;
+    const files = Array.from(event.dataTransfer!.files);
+    
+    const newMaterials: StudyMaterial[] = await Promise.all(
+      files.map(async (file) => {
+        const id = Date.now().toString() + Math.random().toString(36).substr(2, 9);
+        const fileType = file.name.endsWith('.md') ? 'markdown' : 
+                         file.name.endsWith('.pdf') ? 'pdf' : 'unknown';
+        
+        if (fileType === 'unknown') {
+          console.warn(`Unsupported file type: ${file.name}`);
+          return null;
+        }
+
+        const content = fileType === 'markdown' ? await file.text() : await file.arrayBuffer();
+        const filePath = await window.electronAPI.saveFile(content, file.name, name);
+
+        return { 
+          id, 
+          type: fileType, 
+          filePath, 
+          name: file.name 
+        };
+      })
+    );
+
+    const validMaterials = newMaterials.filter((m): m is StudyMaterial => m !== null);
+    if (validMaterials.length > 0) {
+      await handleMaterialsAdded({ detail: validMaterials } as CustomEvent<StudyMaterial[]>);
+    }
+  }
 </script>
 
 <div class="bg-white dark:bg-gray-800 shadow-lg rounded-lg overflow-hidden">
   <CollectionHeader {name} on:deleteCollection={handleDeleteCollection} />
   
-  <div class="p-4">
+  <div class="p-4 relative"
+       on:dragenter={handleDragEnter}
+       on:dragleave={handleDragLeave}
+       on:dragover={handleDragOver}
+       on:drop={handleDrop}>
     <div class="flex justify-between items-center mb-4">
       <h3 class="text-xl font-semibold text-text-light dark:text-text-dark">Study Materials</h3>
       <button
@@ -164,15 +223,28 @@
       </button>
     </div>
     
-    <StudyMaterialsList 
-      {studyMaterials} 
-      collectionId={id} 
-      on:viewFile={handleViewFile} 
-      on:removeStudyMaterial={handleRemoveStudyMaterial}
-    />
+    {#if studyMaterials.length > 0}
+      <StudyMaterialsList 
+        {studyMaterials} 
+        collectionId={id} 
+        on:viewFile={handleViewFile} 
+        on:removeStudyMaterial={handleRemoveStudyMaterial}
+      />
+    {:else}
+      <div class="text-center py-8 text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 rounded-lg">
+        <p>No study materials yet.</p>
+        <p class="mt-2">You can drop files here to add study materials!</p>
+      </div>
+    {/if}
 
     {#if showAddFeedback}
       <p class="mt-2 text-green-600 dark:text-green-400">Successfully added {addedMaterialsCount} material{addedMaterialsCount !== 1 ? 's' : ''}</p>
+    {/if}
+
+    {#if isDragging}
+      <div class="absolute inset-0 bg-blue-100 bg-opacity-90 dark:bg-blue-900 dark:bg-opacity-90 flex items-center justify-center z-10 border-2 border-dashed border-blue-500">
+        <p class="text-2xl font-semibold text-blue-700 dark:text-blue-300">Drop files here to add study materials</p>
+      </div>
     {/if}
   </div>
 

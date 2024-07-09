@@ -51,7 +51,7 @@
         const id = Date.now().toString() + Math.random().toString(36).substr(2, 9);
         if (m.type === 'markdown' && m.file) {
           const content = await m.file.text();
-          const filePath = await saveFile(content, m.name, name);
+          const filePath = await window.electronAPI.saveFile(content, m.name, name);
           return { id, type: 'markdown', filePath, name: m.name };
         } else if (m.type === 'webpage' && m.url) {
           if (!isValidUrl(m.url)) {
@@ -59,7 +59,8 @@
           }
           return { id, type: 'webpage', url: m.url, name: m.url };
         } else if (m.type === 'pdf' && m.file) {
-          const filePath = await saveFile(await m.file.arrayBuffer(), m.name, name);
+          const content = await m.file.arrayBuffer();
+          const filePath = await window.electronAPI.saveFile(content, m.name, name);
           return { id, type: 'pdf', filePath, name: m.name };
         }
         throw new Error(`Invalid material type or missing required data for ${m.name || 'unnamed material'}`);
