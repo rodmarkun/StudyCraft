@@ -20,4 +20,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   loadStudySessions: () =>
     ipcRenderer.invoke('loadStudySessions'),
   openFile: (filePath) => ipcRenderer.invoke('openFile', filePath),
+  deleteAllData: () => ipcRenderer.invoke('deleteAllData'),
+  exitApp: () => ipcRenderer.send('exitApp'),
 });

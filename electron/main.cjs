@@ -140,6 +140,34 @@ ipcMain.handle('saveFile', (event, content, fileName, collectionName) => {
     
     return [];
   });
+
+  ipcMain.handle('deleteAllData', async () => {
+    const userDataPath = app.getPath('userData');
+    const collectionsPath = path.join(userDataPath, 'collections');
+    const studySessionPath = path.join(userDataPath, 'studySessions.json');
+  
+    try {
+      // Delete collections directory
+      if (fs.existsSync(collectionsPath)) {
+        fs.rmdirSync(collectionsPath, { recursive: true });
+      }
+  
+      // Delete studySessions.json
+      if (fs.existsSync(studySessionPath)) {
+        fs.unlinkSync(studySessionPath);
+      }
+  
+      return true;
+    } catch (error) {
+      console.error('Error deleting all data:', error);
+      return false;
+    }
+  });
+  
+  ipcMain.on('exitApp', () => {
+    app.exit(0);
+  });
+  
   
 
 // This method will be called when Electron has finished

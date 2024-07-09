@@ -8,6 +8,7 @@
     });
   
     let showConfirmDialog = false;
+    let isDeleting = false;
   
     function handleChange(key: string, value: any) {
       if (key.startsWith('llmConfig.')) {
@@ -31,10 +32,23 @@
       showConfirmDialog = true;
     }
   
-    function handleConfirmDelete() {
-      // Implement the logic to delete all data here
-      console.log('Deleting all data...');
-      showConfirmDialog = false;
+    async function handleConfirmDelete() {
+      isDeleting = true;
+      try {
+        const success = await window.electronAPI.deleteAllData();
+        if (success) {
+          alert('All data has been deleted. The application will close now.');
+          window.electronAPI.exitApp();
+        } else {
+          alert('There was an error deleting the data. Please try again.');
+        }
+      } catch (error) {
+        console.error('Error deleting all data:', error);
+        alert('There was an error deleting the data. Please try again.');
+      } finally {
+        isDeleting = false;
+        showConfirmDialog = false;
+      }
     }
   
     function handleCancelDelete() {
@@ -102,22 +116,23 @@
     </div>
   
     <div class="space-y-4 pt-6 border-t border-gray-300 dark:border-gray-600">
-      <h3 class="text-lg font-medium text-red-600 dark:text-red-400">Danger Zone</h3>
-      <button
-        on:click={handleDeleteAllData}
-        class="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 focus:outline-none"
-      >
-        Delete All Data
-      </button>
+        <h3 class="text-lg font-medium text-red-600 dark:text-red-400">Danger Zone</h3>
+        <button
+          on:click={handleDeleteAllData}
+          class="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 focus:outline-none disabled:opacity-50"
+          disabled={isDeleting}
+        >
+          {isDeleting ? 'Deleting...' : 'Delete All Data'}
+        </button>
+      </div>
     </div>
-  </div>
-  
-  {#if showConfirmDialog}
-    <ConfirmDialog
-      title="Confirm Deletion"
-      message="Are you sure you want to delete all data? This action cannot be undone."
-      confirmText="Delete All Data"
-      on:confirm={handleConfirmDelete}
-      on:cancel={handleCancelDelete}
-    />
-  {/if}
+    
+    {#if showConfirmDialog}
+      <ConfirmDialog
+        title="Confirm Deletion"
+        message="Are you sure you want to delete all data? This action cannot be undone and will close the application."
+        confirmText="Delete All Data"
+        on:confirm={handleConfirmDelete}
+        on:cancel={handleCancelDelete}
+      />
+    {/if}
