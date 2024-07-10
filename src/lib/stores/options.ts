@@ -1,21 +1,38 @@
 import { writable } from 'svelte/store';
 
-interface LLMConfig {
+interface AIConfig {
   provider: 'none' | 'ollama';
-  // Add more LLM-specific options here in the future
+  ollamaModel: string;
+  ollamaPort: number;
+}
+
+interface VectorDBConfig {
+  provider: 'none' | 'chroma' | 'pinecone';
+  pineconeApiKey: string;
+  pineconeEnvironment: string;
+  pineconeIndex: string;
 }
 
 interface Options {
   openMaterialsInDefaultApp: boolean;
   simplifiedMaterialView: boolean;
-  llmConfig: LLMConfig;
+  aiConfig: AIConfig;
+  vectorDBConfig: VectorDBConfig;
 }
 
 const defaultOptions: Options = {
   openMaterialsInDefaultApp: false,
   simplifiedMaterialView: false,
-  llmConfig: {
+  aiConfig: {
     provider: 'none',
+    ollamaModel: 'llama2',
+    ollamaPort: 11434,
+  },
+  vectorDBConfig: {
+    provider: 'none',
+    pineconeApiKey: '',
+    pineconeEnvironment: '',
+    pineconeIndex: '',
   },
 };
 
@@ -26,8 +43,10 @@ function createOptionsStore() {
     subscribe,
     setOption: <K extends keyof Options>(key: K, value: Options[K]) => 
       update(opts => ({ ...opts, [key]: value })),
-    setLLMOption: <K extends keyof LLMConfig>(key: K, value: LLMConfig[K]) => 
-      update(opts => ({ ...opts, llmConfig: { ...opts.llmConfig, [key]: value } })),
+    setAIOption: <K extends keyof AIConfig>(key: K, value: AIConfig[K]) => 
+      update(opts => ({ ...opts, aiConfig: { ...opts.aiConfig, [key]: value } })),
+    setVectorDBOption: <K extends keyof VectorDBConfig>(key: K, value: VectorDBConfig[K]) => 
+      update(opts => ({ ...opts, vectorDBConfig: { ...opts.vectorDBConfig, [key]: value } })),
     resetToDefaults: () => set(defaultOptions),
     loadOptions: () => {
       const savedOptions = localStorage.getItem('studycraft_options');
