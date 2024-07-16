@@ -4,13 +4,18 @@ interface TimerState {
   isRunning: boolean;
   startTime: number | null;
   elapsedTime: number;
+  isPomodoroMode: boolean;
+  pomodoroLength: number;
+  restLength: number;
+  isRestPhase: boolean;
 }
 
 export interface StudySession {
-  date: string; // ISO date string (YYYY-MM-DD)
+  date: string;
   startTime: number;
   endTime: number;
   duration: number;
+  isPomodoro: boolean;
 }
 
 function createTimerStore() {
@@ -18,6 +23,10 @@ function createTimerStore() {
     isRunning: false,
     startTime: null,
     elapsedTime: 0,
+    isPomodoroMode: false,
+    pomodoroLength: 25 * 60 * 1000,
+    restLength: 5 * 60 * 1000,
+    isRestPhase: false,
   });
 
   let studySessions: StudySession[] = [];
@@ -47,22 +56,64 @@ function createTimerStore() {
       if (state.isRunning && state.startTime) {
         const now = Date.now();
         const duration = state.elapsedTime + (now - state.startTime);
-        if (duration > 0) {
+        if (duration > 0 && !state.isRestPhase) {
           const session: StudySession = {
-            date: new Date(state.startTime).toISOString().split('T')[0], // YYYY-MM-DD
+            date: new Date(state.startTime).toISOString().split('T')[0],
             startTime: state.startTime,
             endTime: now,
             duration: duration,
+            isPomodoro: state.isPomodoroMode,
           };
           saveStudySession(session);
         }
       }
-      loadStudySessions(); // Reload sessions after stopping
-      return { isRunning: false, startTime: null, elapsedTime: 0 };
+      loadStudySessions();
+      return { 
+        ...state,
+        isRunning: false, 
+        startTime: null, 
+        elapsedTime: 0, 
+        isPomodoroMode: false, 
+        isRestPhase: false 
+      };
     }),
-    reset: () => set({ isRunning: false, startTime: null, elapsedTime: 0 }),
+    reset: () => set({ 
+      isRunning: false, 
+      startTime: null, 
+      elapsedTime: 0, 
+      isPomodoroMode: false,
+      pomodoroLength: 25 * 60 * 1000,
+      restLength: 5 * 60 * 1000,
+      isRestPhase: false,
+    }),
+    togglePomodoroMode: () => update(state => ({ ...state, isPomodoroMode: !state.isPomodoroMode })),
+    setPomodoroLength: (length: number) => update(state => ({ ...state, pomodoroLength: length })),
+    setRestLength: (length: number) => update(state => ({ ...state, restLength: length })),
+    switchPhase: () => update(state => {
+      if (state.isRunning && state.startTime) {
+        const now = Date.now();
+        const duration = state.elapsedTime + (now - state.startTime);
+        if (!state.isRestPhase && duration > 0) {
+          const session: StudySession = {
+            date: new Date(state.startTime).toISOString().split('T')[0],
+            startTime: state.startTime,
+            endTime: now,
+            duration: duration,
+            isPomodoro: true,
+          };
+          saveStudySession(session);
+        }
+      }
+      return { 
+        ...state, 
+        isRestPhase: !state.isRestPhase, 
+        elapsedTime: 0, 
+        startTime: null,
+        isRunning: false 
+      };
+    }),
     getStudySessions: () => studySessions,
-    loadStudySessions, // Expose this method to allow manual reloading of sessions
+    loadStudySessions,
   };
 }
 

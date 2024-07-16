@@ -1,19 +1,35 @@
 import { writable } from 'svelte/store';
 
-interface AIConfig {
-  provider: 'none' | 'ollama';
-  ollamaModel: string;
-  ollamaPort: number;
+export interface OllamaConfig {
+  model: string;
+  port: number;
 }
 
-interface VectorDBConfig {
+export interface RunpodConfig {
+  apiKey: string;
+  serverlessApiId: string;
+}
+
+export interface OpenAIConfig {
+  apiKey: string;
+  model: string;
+}
+
+export interface AIConfig {
+  provider: 'none' | 'ollama' | 'runpod' | 'openai';
+  ollama: OllamaConfig;
+  runpod: RunpodConfig;
+  openai: OpenAIConfig;
+}
+
+export interface VectorDBConfig {
   provider: 'none' | 'chroma' | 'pinecone';
   pineconeApiKey: string;
   pineconeEnvironment: string;
   pineconeIndex: string;
 }
 
-interface Options {
+export interface Options {
   openMaterialsInDefaultApp: boolean;
   simplifiedMaterialView: boolean;
   aiConfig: AIConfig;
@@ -25,8 +41,9 @@ const defaultOptions: Options = {
   simplifiedMaterialView: false,
   aiConfig: {
     provider: 'none',
-    ollamaModel: 'llama2',
-    ollamaPort: 11434,
+    ollama: { model: 'llama2', port: 11434 },
+    runpod: { apiKey: '', serverlessApiId: '' },
+    openai: { apiKey: '', model: 'text-davinci-003' },
   },
   vectorDBConfig: {
     provider: 'none',
@@ -45,6 +62,18 @@ function createOptionsStore() {
       update(opts => ({ ...opts, [key]: value })),
     setAIOption: <K extends keyof AIConfig>(key: K, value: AIConfig[K]) => 
       update(opts => ({ ...opts, aiConfig: { ...opts.aiConfig, [key]: value } })),
+    setAIProviderOption: (
+      provider: AIConfig['provider'],
+      key: string,
+      value: any
+    ) => 
+      update(opts => ({
+        ...opts,
+        aiConfig: {
+          ...opts.aiConfig,
+          [provider]: { ...opts.aiConfig[provider], [key]: value }
+        }
+      })),
     setVectorDBOption: <K extends keyof VectorDBConfig>(key: K, value: VectorDBConfig[K]) => 
       update(opts => ({ ...opts, vectorDBConfig: { ...opts.vectorDBConfig, [key]: value } })),
     resetToDefaults: () => set(defaultOptions),
