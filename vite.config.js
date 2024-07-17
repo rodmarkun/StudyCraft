@@ -1,21 +1,27 @@
-// vite.config.js
 import { defineConfig } from 'vite';
-import { svelte } from '@sveltejs/vite-plugin-svelte';
+import path from 'path';
 
-export default defineConfig({
-  plugins: [svelte()],
-  resolve: {
-    alias: {
-      'marked': 'marked',
-      'dompurify': 'dompurify'
+export default defineConfig(async () => {
+  const { svelte } = await import('@sveltejs/vite-plugin-svelte');
+
+  return {
+    plugins: [svelte()],
+    base: './',
+    build: {
+      outDir: 'dist',
+      emptyOutDir: true,
+      rollupOptions: {
+        input: {
+          main: path.resolve(__dirname, 'index.html'),
+          'electron-main': path.resolve(__dirname, 'electron/main.cjs'),
+        },
+        output: {
+          entryFileNames: (chunkInfo) => {
+            return chunkInfo.name === 'electron-main' ? '[name].cjs' : '[name]-[hash].js';
+          },
+        },
+        external: ['electron']
+      }
     }
-  },
-  build: {
-    rollupOptions: {
-      external: ['electron']
-    }
-  },
-  define: {
-    'process.env': {}
-  }
+  };
 });

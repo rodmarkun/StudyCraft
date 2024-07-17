@@ -1,5 +1,7 @@
 module.exports = {
-  packagerConfig: {},
+  packagerConfig: {
+    asar: true,
+  },
   rebuildConfig: {},
   makers: [
     {
@@ -17,6 +19,25 @@ module.exports = {
     {
       name: '@electron-forge/maker-rpm',
       config: {},
+    },
+  ],
+  plugins: [
+    {
+      name: '@electron-forge/plugin-vite',
+      config: {
+        build: [
+          {
+            entry: 'electron/main.cjs',
+            config: 'vite.config.js',
+          },
+        ],
+        renderer: [
+          {
+            name: 'main_window',
+            config: 'vite.config.js',
+          },
+        ],
+      },
     },
   ],
 };
