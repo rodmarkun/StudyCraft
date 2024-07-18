@@ -6,6 +6,7 @@
   import { updateFlashcardDeck } from '../stores/collections';
   import { generateFlashcards } from '../services/llmService';
   import { loadStudyMaterialContent } from '../stores/collections';
+  import { scrapeWebsite } from '../services/webScraperService';
 
   export let deck: FlashcardDeck | null;
   export let isOpen: boolean;
@@ -107,14 +108,15 @@
       if (selectedMaterial.type === 'markdown') {
         content = await loadStudyMaterialContent(selectedMaterial.filePath!);
       } else if (selectedMaterial.type === 'pdf') {
-        content = selectedMaterial.filePath;
+        content = await loadStudyMaterialContent(selectedMaterial.filePath!);
       } else if (selectedMaterial.type === 'webpage') {
-        content = `Content from webpage: ${selectedMaterial.url}`;
+        content = await scrapeWebsite(selectedMaterial.url!);
       } else {
         throw new Error('Unsupported material type');
       }
 
       const generatedCards = await generateFlashcards(content, numberOfCardsToGenerate, selectedMaterial.type);
+
 
       const existingQuestions = new Set(editedDeck.flashcards.map(card => card.question.toLowerCase()));
 

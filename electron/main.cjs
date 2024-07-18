@@ -4,6 +4,7 @@ const { app, BrowserWindow, ipcMain, shell } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const pdf = require('pdf-parse');
+const axios = require('axios')
 
 if (require('electron-squirrel-startup')) app.quit();
 
@@ -175,6 +176,16 @@ ipcMain.handle('saveFile', (event, content, fileName, collectionName) => {
     } catch (error) {
       console.error('Error deleting all data:', error);
       return false;
+    }
+  });
+
+  ipcMain.handle('fetchWebContent', async (event, url) => {
+    try {
+      const response = await axios.get(url);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching web content:', error);
+      throw error;
     }
   });
   

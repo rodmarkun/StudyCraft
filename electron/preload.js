@@ -23,4 +23,5 @@ contextBridge.exposeInMainWorld('electronAPI', {
   deleteAllData: () => ipcRenderer.invoke('deleteAllData'),
   exitApp: () => ipcRenderer.send('exitApp'),
   parsePDF: (filePath) => ipcRenderer.invoke('parsePDF', filePath),
+  fetchWebContent: (url) => ipcRenderer.invoke('fetchWebContent', url),
 });

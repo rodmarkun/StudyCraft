@@ -137,11 +137,16 @@ async function getOpenAIResponse(prompt: string, config: { apiKey: string; model
     return data.choices[0].message.content.trim();
 }
 
+function cleanResponse(response: string): string {
+    // Remove numbering and bullet points
+    return response.replace(/^\s*(\d+\.|-|\*)\s*/gm, '').trim();
+}
+
 export async function generateFlashcards(content: string, numberOfCards: number, materialType: string): Promise<Array<{question: string, answer: string}>> {
     let processedContent = content;
 
     if (materialType === 'pdf') {
-        processedContent = await cleanPDFContent(content); // content is now the file path for PDFs
+        processedContent = await cleanPDFContent(content);
     }
 
     const chunkSize = 2000;
@@ -155,18 +160,18 @@ export async function generateFlashcards(content: string, numberOfCards: number,
 
         const chunkPrompt = `Generate ${Math.min(remainingCards, 5)} unique flashcard questions based on the following content. Follow these guidelines:
 
-1. Each question should test a key concept or fact from the content.
-2. Questions should be clear, concise, and specific.
-3. Avoid yes/no questions; prefer open-ended or fill-in-the-blank questions.
-4. Ensure questions are diverse and cover different aspects of the content.
-5. Output only the questions, one per line, without numbering or additional text.
+- Each question should test a key concept or fact from the content.
+- Questions should be clear, concise, and specific.
+- Avoid yes/no questions; prefer open-ended or fill-in-the-blank questions.
+- Ensure questions are diverse and cover different aspects of the content.
+- Output only the questions, one per line, without numbering, bullets, or additional text.
 
 Examples:
-- What is the main function of [specific concept]?
-- How does [process/phenomenon] work?
-- What are the key characteristics of [topic]?
-- In what way does [element] contribute to [larger system]?
-- Fill in the blank: [Important term] is defined as ___.
+What is the main function of [specific concept]?
+How does [process/phenomenon] work?
+What are the key characteristics of [topic]?
+In what way does [element] contribute to [larger system]?
+Fill in the blank: [Important term] is defined as ___.
 
 Content:
 ${chunk}
@@ -174,18 +179,20 @@ ${chunk}
 Questions:`;
 
         const questionsResponse = await getLLMResponse(chunkPrompt);
-        const questions = questionsResponse.split('\n').filter(q => q.trim() !== '');
+        const questions = questionsResponse.split('\n')
+            .map(q => cleanResponse(q))
+            .filter(q => q.trim() !== '');
 
         for (const question of questions) {
             if (usedQuestions.has(question.toLowerCase())) continue;
 
             const answerPrompt = `Provide a concise and accurate answer to the following question based on the given content. Follow these guidelines:
 
-1. Answer should be clear, informative, and directly address the question.
-2. Keep the answer concise, ideally 1-3 sentences.
-3. Include key details or examples if necessary for clarity.
-4. If the question asks to fill in a blank, provide the missing term or phrase.
-5. Output only the answer, without any additional text or explanation.
+- Answer should be clear, informative, and directly address the question.
+- Keep the answer concise, ideally 1-3 sentences.
+- Include key details or examples if necessary for clarity.
+- If the question asks to fill in a blank, provide the missing term or phrase.
+- Output only the answer, without any additional text, explanation, or numbering.
 
 Question: "${question}"
 
@@ -194,10 +201,10 @@ ${chunk}
 
 Answer:`;
 
-            const answer = await getLLMResponse(answerPrompt);
+            const answer = cleanResponse(await getLLMResponse(answerPrompt));
 
-            if (answer.trim() !== '') {
-                flashcards.push({ question, answer: answer.trim() });
+            if (answer !== '') {
+                flashcards.push({ question, answer });
                 usedQuestions.add(question.toLowerCase());
             }
 
