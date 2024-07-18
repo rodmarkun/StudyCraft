@@ -37,6 +37,7 @@
     "cross-env": "^7.0.3",
     "electron": "^24.3.1",
     "electron-reload": "^2.0.0-alpha.1",
+    "pdfjs-dist": "^4.4.168",
     "postcss": "^8.4.23",
     "svelte": "^3.57.0",
     "tailwindcss": "^3.3.2",
@@ -49,6 +50,7 @@
     "electron-squirrel-startup": "^1.0.0",
     "lucide-react": "^0.400.0",
     "lucide-svelte": "^0.399.0",
-    "marked": "^13.0.1"
+    "marked": "^13.0.1",
+    "pdf-parse": "^1.1.1"
   }
 }

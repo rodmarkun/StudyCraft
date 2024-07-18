@@ -3,6 +3,7 @@ const { log } = require('console');
 const { app, BrowserWindow, ipcMain, shell } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const pdf = require('pdf-parse');
 
 if (require('electron-squirrel-startup')) app.quit();
 
@@ -113,6 +114,17 @@ ipcMain.handle('saveFile', (event, content, fileName, collectionName) => {
 
   ipcMain.handle('openFile', (event, filePath) => {
     shell.openPath(filePath);
+  });
+
+  ipcMain.handle('parsePDF', async (event, filePath) => {
+    try {
+      const dataBuffer = fs.readFileSync(filePath);
+      const data = await pdf(dataBuffer);
+      return data.text;
+    } catch (error) {
+      console.error('Error parsing PDF:', error);
+      throw error;
+    }
   });
 
   ipcMain.handle('saveStudySession', (event, session) => {

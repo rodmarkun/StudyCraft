@@ -31,6 +31,7 @@
   let newMaterialName = '';
   let isDragging = false;
   let dragCounter = 0;
+  let isEditDeckModalOpen = false;
 
   function handleDeleteCollection() {
     deleteCollection(id);
@@ -79,6 +80,7 @@
     const { material } = event.detail;
     if ('flashcards' in material) {
       editingDeck = material;
+      isEditDeckModalOpen = true;
     } else if ('questions' in material) {
       editingTest = material;
     }
@@ -104,6 +106,7 @@
 
   function closeEditDeck() {
     editingDeck = null;
+    isEditDeckModalOpen = false
   }
 
   function handleDeckUpdate(event: CustomEvent<FlashcardDeck>) {
@@ -344,6 +347,7 @@
   deck={editingDeck}
   isOpen={editingDeck !== null}
   collectionId={id} 
+  {studyMaterials}
   on:close={closeEditDeck}
   on:update={handleDeckUpdate}
 />

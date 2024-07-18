@@ -2,6 +2,7 @@
 
 import { get } from 'svelte/store';
 import { options } from '../stores/options';
+import { cleanPDFContent } from '../utils/fileUtils'
 
 export interface LLMResponse {
     response: string;
@@ -40,6 +41,31 @@ export async function getLLMExplanation(question: string, answer: string): Promi
     } catch (error) {
         console.error('Error fetching explanation:', error);
         return `There was an error with the LLM. Please check if your current configuration is correct: Provider - ${aiConfig.provider}`;
+    }
+}
+
+async function getLLMResponse(prompt: string): Promise<string> {
+    const currentOptions = getCurrentOptions();
+    const { aiConfig } = currentOptions;
+
+    if (aiConfig.provider === 'none') {
+        throw new Error("LLM is not configured. Please set up an LLM provider in the options.");
+    }
+
+    try {
+        switch (aiConfig.provider) {
+            case 'ollama':
+                return await getOllamaResponse(prompt, aiConfig.ollama);
+            case 'runpod':
+                return await getRunpodResponse(prompt, aiConfig.runpod);
+            case 'openai':
+                return await getOpenAIResponse(prompt, aiConfig.openai);
+            default:
+                throw new Error('Unsupported LLM provider');
+        }
+    } catch (error) {
+        console.error('Error getting LLM response:', error);
+        throw error;
     }
 }
 
@@ -109,4 +135,83 @@ async function getOpenAIResponse(prompt: string, config: { apiKey: string; model
     
     const data = await response.json();
     return data.choices[0].message.content.trim();
+}
+
+export async function generateFlashcards(content: string, numberOfCards: number, materialType: string): Promise<Array<{question: string, answer: string}>> {
+    let processedContent = content;
+
+    if (materialType === 'pdf') {
+        processedContent = await cleanPDFContent(content); // content is now the file path for PDFs
+    }
+
+    const chunkSize = 2000;
+    const chunks = splitContent(processedContent, chunkSize);
+    const flashcards: Array<{question: string, answer: string}> = [];
+    const usedQuestions = new Set<string>();
+
+    for (const chunk of chunks) {
+        const remainingCards = numberOfCards - flashcards.length;
+        if (remainingCards <= 0) break;
+
+        const chunkPrompt = `Generate ${Math.min(remainingCards, 5)} unique flashcard questions based on the following content. Follow these guidelines:
+
+1. Each question should test a key concept or fact from the content.
+2. Questions should be clear, concise, and specific.
+3. Avoid yes/no questions; prefer open-ended or fill-in-the-blank questions.
+4. Ensure questions are diverse and cover different aspects of the content.
+5. Output only the questions, one per line, without numbering or additional text.
+
+Examples:
+- What is the main function of [specific concept]?
+- How does [process/phenomenon] work?
+- What are the key characteristics of [topic]?
+- In what way does [element] contribute to [larger system]?
+- Fill in the blank: [Important term] is defined as ___.
+
+Content:
+${chunk}
+
+Questions:`;
+
+        const questionsResponse = await getLLMResponse(chunkPrompt);
+        const questions = questionsResponse.split('\n').filter(q => q.trim() !== '');
+
+        for (const question of questions) {
+            if (usedQuestions.has(question.toLowerCase())) continue;
+
+            const answerPrompt = `Provide a concise and accurate answer to the following question based on the given content. Follow these guidelines:
+
+1. Answer should be clear, informative, and directly address the question.
+2. Keep the answer concise, ideally 1-3 sentences.
+3. Include key details or examples if necessary for clarity.
+4. If the question asks to fill in a blank, provide the missing term or phrase.
+5. Output only the answer, without any additional text or explanation.
+
+Question: "${question}"
+
+Content:
+${chunk}
+
+Answer:`;
+
+            const answer = await getLLMResponse(answerPrompt);
+
+            if (answer.trim() !== '') {
+                flashcards.push({ question, answer: answer.trim() });
+                usedQuestions.add(question.toLowerCase());
+            }
+
+            if (flashcards.length >= numberOfCards) break;
+        }
+    }
+
+    return flashcards;
+}
+
+function splitContent(content: string, chunkSize: number): string[] {
+    const chunks: string[] = [];
+    for (let i = 0; i < content.length; i += chunkSize) {
+        chunks.push(content.slice(i, i + chunkSize));
+    }
+    return chunks;
 }

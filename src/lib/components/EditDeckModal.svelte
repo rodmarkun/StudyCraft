@@ -1,13 +1,16 @@
-<!-- src/lib/components/EditDeckModal.svelte -->
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
-  import type { FlashcardDeck, Flashcard } from '../stores/collections';
+  import type { FlashcardDeck, Flashcard, StudyMaterial } from '../stores/collections';
   import Modal from './Modal.svelte';
+  import Popover from './Popover.svelte';
   import { updateFlashcardDeck } from '../stores/collections';
+  import { generateFlashcards } from '../services/llmService';
+  import { loadStudyMaterialContent } from '../stores/collections';
 
   export let deck: FlashcardDeck | null;
   export let isOpen: boolean;
   export let collectionId: string | undefined;
+  export let studyMaterials: StudyMaterial[];
 
   const dispatch = createEventDispatcher();
 
@@ -15,6 +18,10 @@
   let newQuestion = '';
   let newAnswer = '';
   let errorMessage = '';
+  let numberOfCardsToGenerate = 5;
+  let selectedMaterialId = '';
+  let isGenerating = false;
+  let isGeneratePopoverOpen = false;
 
   $: if (deck) {
     editedDeck = JSON.parse(JSON.stringify(deck));
@@ -25,6 +32,15 @@
     errorMessage = 'Error: Collection ID is missing';
   } else {
     errorMessage = '';
+  }
+
+  function toggleGeneratePopover() {
+    isGeneratePopoverOpen = !isGeneratePopoverOpen;
+  }
+
+  async function handleGenerateFlashcards() {
+    await generateFlashcardsFromMaterial();
+    isGeneratePopoverOpen = false;
   }
 
   function addFlashcard() {
@@ -74,6 +90,54 @@
   function close() {
     dispatch('close');
   }
+
+  async function generateFlashcardsFromMaterial() {
+    if (!editedDeck || !selectedMaterialId) return;
+
+    const selectedMaterial = studyMaterials.find(m => m.id === selectedMaterialId);
+    if (!selectedMaterial) {
+      errorMessage = 'Selected study material not found.';
+      return;
+    }
+
+    isGenerating = true;
+    errorMessage = '';
+    try {
+      let content;
+      if (selectedMaterial.type === 'markdown') {
+        content = await loadStudyMaterialContent(selectedMaterial.filePath!);
+      } else if (selectedMaterial.type === 'pdf') {
+        content = selectedMaterial.filePath;
+      } else if (selectedMaterial.type === 'webpage') {
+        content = `Content from webpage: ${selectedMaterial.url}`;
+      } else {
+        throw new Error('Unsupported material type');
+      }
+
+      const generatedCards = await generateFlashcards(content, numberOfCardsToGenerate, selectedMaterial.type);
+
+      const existingQuestions = new Set(editedDeck.flashcards.map(card => card.question.toLowerCase()));
+
+      const newUniqueCards = generatedCards.filter(card => !existingQuestions.has(card.question.toLowerCase()));
+
+      editedDeck.flashcards = [
+        ...editedDeck.flashcards,
+        ...newUniqueCards.map((card) => ({
+          id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+          question: card.question,
+          answer: card.answer
+        }))
+      ];
+
+      errorMessage = '';
+      isGeneratePopoverOpen = false;
+    } catch (error) {
+      console.error('Error generating flashcards:', error);
+      errorMessage = `Failed to generate flashcards: ${error.message}. Please try again or check your LLM configuration.`;
+    } finally {
+      isGenerating = false;
+    }
+  }
 </script>
 
 <Modal {isOpen} title={deck ? `Editing: ${deck.name}` : ''} on:close={close}>
@@ -100,12 +164,49 @@
           placeholder="Answer"
           class="w-full p-2 border rounded mb-2 text-gray-800"
         />
-        <button
-          on:click={addFlashcard}
-          class="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
-        >
-          Add Flashcard
-        </button>
+        <div class="flex space-x-2">
+          <button
+            on:click={addFlashcard}
+            class="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
+          >
+            Add Flashcard
+          </button>
+          <Popover bind:open={isGeneratePopoverOpen}>
+            <button
+              slot="trigger"
+              on:click={toggleGeneratePopover}
+              class="px-4 py-2 bg-purple-500 text-white rounded hover:bg-purple-600"
+            >
+              Generate Flashcards
+            </button>
+            <div class="p-4 space-y-4">
+              <select
+                bind:value={selectedMaterialId}
+                class="w-full p-2 border rounded text-gray-800"
+              >
+                <option value="">Select a study material</option>
+                {#each studyMaterials as material}
+                  <option value={material.id}>{material.name}</option>
+                {/each}
+              </select>
+              <input
+                type="number"
+                bind:value={numberOfCardsToGenerate}
+                min="1"
+                max="20"
+                class="w-full p-2 border rounded text-gray-800"
+                placeholder="Number of flashcards"
+              />
+              <button
+                on:click={handleGenerateFlashcards}
+                class="w-full px-4 py-2 bg-indigo-500 text-white rounded hover:bg-indigo-600"
+                disabled={isGenerating || !selectedMaterialId}
+              >
+                {isGenerating ? 'Generating...' : 'Generate'}
+              </button>
+            </div>
+          </Popover>
+        </div>
       </div>
       <div>
         <h3 class="text-lg font-semibold mb-2">Existing Flashcards</h3>
