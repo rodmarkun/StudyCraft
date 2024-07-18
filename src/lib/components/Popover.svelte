@@ -2,6 +2,8 @@
   import { createEventDispatcher } from 'svelte';
 
   export let open = false;
+  export let width = 'w-64';
+  export let customClass = '';
 
   const dispatch = createEventDispatcher();
 
@@ -20,7 +22,7 @@
   </div>
   
   {#if open}
-    <div class="absolute z-10 mt-2 w-64 rounded-md shadow-lg bg-white dark:bg-gray-800 ring-1 ring-black ring-opacity-5 popover-content">
+    <div class={`fixed z-50 mt-2 ${width} rounded-md shadow-lg bg-white dark:bg-gray-800 ring-1 ring-black ring-opacity-5 popover-content ${customClass}`} style="max-height: 80vh; overflow-y: auto;">
       <div class="p-4">
         <slot />
       </div>

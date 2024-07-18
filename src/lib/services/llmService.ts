@@ -158,20 +158,22 @@ export async function generateFlashcards(content: string, numberOfCards: number,
         const remainingCards = numberOfCards - flashcards.length;
         if (remainingCards <= 0) break;
 
-        const chunkPrompt = `Generate ${Math.min(remainingCards, 5)} unique flashcard questions based on the following content. Follow these guidelines:
+        const chunkPrompt = `Generate ${Math.min(remainingCards, 5)} unique and diverse flashcard questions based on the following content. Follow these guidelines:
 
-- Each question should test a key concept or fact from the content.
+- Each question should test a different key concept or fact from the content.
+- Ensure questions cover a wide range of topics within the content.
+- Use a variety of question types (e.g., "what", "how", "why", "explain", "compare", "analyze").
 - Questions should be clear, concise, and specific.
 - Avoid yes/no questions; prefer open-ended or fill-in-the-blank questions.
-- Ensure questions are diverse and cover different aspects of the content.
 - Output only the questions, one per line, without numbering, bullets, or additional text.
 
 Examples:
-What is the main function of [specific concept]?
-How does [process/phenomenon] work?
-What are the key characteristics of [topic]?
-In what way does [element] contribute to [larger system]?
-Fill in the blank: [Important term] is defined as ___.
+What is the primary purpose of [specific concept]?
+How does [process/phenomenon] impact [related system]?
+Why is [particular aspect] significant in the context of [broader topic]?
+Explain the relationship between [concept A] and [concept B].
+Compare and contrast [element 1] with [element 2].
+Analyze the implications of [specific event or idea].
 
 Content:
 ${chunk}

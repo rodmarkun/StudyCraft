@@ -345,7 +345,7 @@
 
 <EditDeckModal
   deck={editingDeck}
-  isOpen={editingDeck !== null}
+  isOpen={isEditDeckModalOpen}
   collectionId={id} 
   {studyMaterials}
   on:close={closeEditDeck}

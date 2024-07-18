@@ -23,6 +23,13 @@
     }
   }
 
+  function getMaterialName(material: StudyMaterial): string {
+    if (material.type === 'webpage') {
+      return material.name || material.url;
+    }
+    return material.name;
+  }
+
   async function handleViewFile(material: StudyMaterial) {
     if (material.type === 'pdf' && material.filePath) {
       try {
@@ -70,7 +77,7 @@
       <div class="flex items-center">
         <span class="text-2xl mr-2">{getIcon(material.type)}</span>
         <span class="text-text-light dark:text-text-dark">
-          {material.name}
+          {getMaterialName(material)}
         </span>
       </div>
       <button

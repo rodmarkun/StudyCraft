@@ -4,6 +4,7 @@
   import Modal from './Modal.svelte';
   import { saveFile } from '../utils/fileUtils';
   import type { StudyMaterial } from '../stores/collections';
+  import { getWebsiteTitle } from '../services/webScraperService';
 
   export let isOpen = false;
   export let collectionId: string;
@@ -57,7 +58,8 @@
           if (!isValidUrl(m.url)) {
             throw new Error(`Invalid URL: ${m.url}`);
           }
-          return { id, type: 'webpage', url: m.url, name: m.url };
+          const websiteTitle = await getWebsiteTitle(m.url);
+          return { id, type: 'webpage', url: m.url, name: websiteTitle };
         } else if (m.type === 'pdf' && m.file) {
           const content = await m.file.arrayBuffer();
           const filePath = await window.electronAPI.saveFile(content, m.name, name);

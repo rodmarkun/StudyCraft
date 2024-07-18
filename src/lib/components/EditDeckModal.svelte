@@ -143,28 +143,28 @@
 </script>
 
 <Modal {isOpen} title={deck ? `Editing: ${deck.name}` : ''} on:close={close}>
-  {#if errorMessage}
-    <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
-      <strong class="font-bold">Error!</strong>
-      <span class="block sm:inline">{errorMessage}</span>
-    </div>
-  {/if}
+  <div class="flex flex-col h-full">
+    {#if errorMessage}
+      <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
+        <strong class="font-bold">Error!</strong>
+        <span class="block sm:inline">{errorMessage}</span>
+      </div>
+    {/if}
 
-  {#if editedDeck}
-    <div class="space-y-4">
-      <div>
+    {#if editedDeck}
+      <div class="flex-shrink-0 mb-4">
         <h3 class="text-lg font-semibold mb-2">Add New Flashcard</h3>
         <input
           type="text"
           bind:value={newQuestion}
           placeholder="Question"
-          class="w-full p-2 border rounded mb-2 text-gray-800"
+          class="w-full p-2 border rounded mb-2 text-gray-800 dark:text-white dark:bg-gray-700"
         />
         <input
           type="text"
           bind:value={newAnswer}
           placeholder="Answer"
-          class="w-full p-2 border rounded mb-2 text-gray-800"
+          class="w-full p-2 border rounded mb-2 text-gray-800 dark:text-white dark:bg-gray-700"
         />
         <div class="flex space-x-2">
           <button
@@ -173,7 +173,7 @@
           >
             Add Flashcard
           </button>
-          <Popover bind:open={isGeneratePopoverOpen}>
+          <Popover bind:open={isGeneratePopoverOpen} width="w-96" customClass="dark:bg-gray-700">
             <button
               slot="trigger"
               on:click={toggleGeneratePopover}
@@ -182,35 +182,45 @@
               Generate Flashcards
             </button>
             <div class="p-4 space-y-4">
+              <h3 class="text-lg font-semibold mb-2 text-gray-800 dark:text-white">Generate Flashcards</h3>
+              <p class="text-sm text-gray-600 dark:text-gray-300 mb-4">
+                Select a study material and specify the number of flashcards you want to generate.
+                The AI will create flashcards based on the content of the selected material.
+              </p>
               <select
                 bind:value={selectedMaterialId}
-                class="w-full p-2 border rounded text-gray-800"
+                class="w-full p-2 border rounded text-gray-800 dark:text-white dark:bg-gray-600"
               >
                 <option value="">Select a study material</option>
                 {#each studyMaterials as material}
                   <option value={material.id}>{material.name}</option>
                 {/each}
               </select>
-              <input
-                type="number"
-                bind:value={numberOfCardsToGenerate}
-                min="1"
-                max="20"
-                class="w-full p-2 border rounded text-gray-800"
-                placeholder="Number of flashcards"
-              />
+              <div class="mt-2">
+                <label for="numCards" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Number of flashcards to generate:
+                </label>
+                <input
+                  id="numCards"
+                  type="number"
+                  bind:value={numberOfCardsToGenerate}
+                  min="1"
+                  max="20"
+                  class="mt-1 w-full p-2 border rounded text-gray-800 dark:text-white dark:bg-gray-600"
+                />
+              </div>
               <button
                 on:click={handleGenerateFlashcards}
                 class="w-full px-4 py-2 bg-indigo-500 text-white rounded hover:bg-indigo-600"
                 disabled={isGenerating || !selectedMaterialId}
               >
-                {isGenerating ? 'Generating...' : 'Generate'}
+                {isGenerating ? 'Generating...' : 'Generate Flashcards'}
               </button>
             </div>
           </Popover>
         </div>
       </div>
-      <div>
+      <div class="flex-grow overflow-y-auto mb-4">
         <h3 class="text-lg font-semibold mb-2">Existing Flashcards</h3>
         {#each editedDeck.flashcards as card (card.id)}
           <div class="border p-2 rounded mb-2">
@@ -218,13 +228,13 @@
               type="text"
               value={card.question}
               on:input={(e) => updateFlashcard(card.id, 'question', e.target.value)}
-              class="w-full p-2 border rounded mb-2 text-gray-800"
+              class="w-full p-2 border rounded mb-2 text-gray-800 dark:text-white dark:bg-gray-700"
             />
             <input
               type="text"
               value={card.answer}
               on:input={(e) => updateFlashcard(card.id, 'answer', e.target.value)}
-              class="w-full p-2 border rounded mb-2 text-gray-800"
+              class="w-full p-2 border rounded mb-2 text-gray-800 dark:text-white dark:bg-gray-700"
             />
             <button
               on:click={() => removeFlashcard(card.id)}
@@ -235,15 +245,17 @@
           </div>
         {/each}
       </div>
-      <button
-        on:click={save}
-        class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-        disabled={!collectionId}
-      >
-        Save Changes
-      </button>
-    </div>
-  {:else}
-    <p>No deck selected for editing.</p>
-  {/if}
+      <div class="flex-shrink-0">
+        <button
+          on:click={save}
+          class="w-full px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+          disabled={!collectionId}
+        >
+          Save Changes
+        </button>
+      </div>
+    {:else}
+      <p>No deck selected for editing.</p>
+    {/if}
+  </div>
 </Modal>

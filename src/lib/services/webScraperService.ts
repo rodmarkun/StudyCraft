@@ -22,3 +22,14 @@ export async function scrapeWebsite(url: string): Promise<string> {
     throw new Error(`Failed to scrape website: ${error.message}`);
   }
 }
+
+export async function getWebsiteTitle(url: string): Promise<string> {
+    try {
+      const response = await window.electronAPI.fetchWebContent(url);
+      const titleMatch = response.match(/<title>(.*?)<\/title>/i);
+      return titleMatch ? titleMatch[1].trim() : url;
+    } catch (error) {
+      console.error('Error fetching website title:', error);
+      return url;
+    }
+  }
