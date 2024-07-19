@@ -16,16 +16,16 @@
         <li>Once it's running, come back to this application and select Ollama as your LLM provider.</li>
         <li>Enter your model name ("llama2" in this case) and "11434" as the port (unless you've changed the default port).</li>
       </ol>
-      <p class="mt-4"><strong>Note:</strong> Using these models requires a computer with a good graphics card for optimal performance. Without a powerful GPU, response times may be longer.</p>
+      <p class="mt-4"><strong>Note:</strong> Using these models requires a computer with a good graphics card for optimal performance. Without a powerful GPU, response times may be way too long.</p>
     `,
     runpod: `
       <h3 class="text-xl font-bold mb-4">How to use Runpod</h3>
       <ol class="list-decimal list-inside space-y-2">
         <li>Visit <a href="https://www.runpod.io/" target="_blank" rel="noopener noreferrer" class="text-blue-500 hover:underline">https://www.runpod.io/</a> and create an account.</li>
         <li>Navigate to the API section and generate an API key.</li>
-        <li>Create a new serverless deployment and note down the Serverless API ID.</li>
-        <li>In the application, select Runpod as your LLM provider.</li>
-        <li>Enter your API key and Serverless API ID in the respective fields.</li>
+        <li>Create a new serverless deployment with the LLM of your choice and note down the Serverless API ID. If you are new to Runpod, we recommend this <a href="https://www.youtube.com/watch?v=Ftb4vbGUr7U&pp=ygVTTGxhbWEgMiAtIEJ1aWxkIFlvdXIgT3duIFRleHQgR2VuZXJhdGlvbiBBUEkgd2l0aCBMbGFtYSAyIC0gb24gUnVuUG9kLCBTdGVwLWJ5LVN0ZXA%3D" target="_blank" rel="noopener noreferrer" class="text-blue-500 hover:underline">video</a> to set it up.</li>
+        <li>In StudyCraft, select Runpod as your LLM provider.</li>
+        <li>Enter your API key and Serverless API ID in the respective fields. If your serverless deployment has a cold start, it might take a couple of minutes to load each time the serverless deployment goes down after inactivity.</li>
       </ol>
       <p class="mt-4"><strong>Note:</strong> Runpod is a cloud service, so you'll be charged based on your usage. Make sure to review their pricing before proceeding.</p>
     `,

@@ -89,7 +89,7 @@ function createTimerStore() {
     togglePomodoroMode: () => update(state => ({ ...state, isPomodoroMode: !state.isPomodoroMode })),
     setPomodoroLength: (length: number) => update(state => ({ ...state, pomodoroLength: length })),
     setRestLength: (length: number) => update(state => ({ ...state, restLength: length })),
-    switchPhase: () => update(state => {
+    switchPhase: (callback?: () => void) => update(state => {
       if (state.isRunning && state.startTime) {
         const now = Date.now();
         const duration = state.elapsedTime + (now - state.startTime);
@@ -103,6 +103,9 @@ function createTimerStore() {
           };
           saveStudySession(session);
         }
+      }
+      if (callback) {
+        callback();
       }
       return { 
         ...state, 

@@ -7,6 +7,7 @@
   let displayTime = '00:00:00';
   let intervalId: number;
   let popoverOpen = false;
+  let audio: HTMLAudioElement;
 
   function formatTime(ms: number): string {
     const seconds = Math.floor(ms / 1000);
@@ -27,7 +28,7 @@
       const remainingTime = isRestPhase ? restLength - totalElapsed : pomodoroLength - totalElapsed;
       displayTime = formatTime(Math.max(0, remainingTime));
       if (remainingTime <= 0) {
-        timerStore.switchPhase();
+        timerStore.switchPhase(playNotificationSound);
       }
     } else {
       const totalElapsed = elapsedTime + (isRunning && startTime ? now - startTime : 0);
@@ -35,7 +36,16 @@
     }
   }
 
+  function playNotificationSound() {
+    if (audio) {
+      audio.play().catch(error => {
+        console.error('Error playing notification sound:', error);
+      });
+    }
+  }
+
   onMount(() => {
+    audio = new Audio('/src/assets/notification-sound.mp3'); // Replace with your actual sound file path
     intervalId = setInterval(updateDisplay, 1000);
   });
 
