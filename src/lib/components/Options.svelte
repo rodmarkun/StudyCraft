@@ -1,7 +1,7 @@
 <!-- src/lib/components/Options.svelte -->
 <script lang="ts">
   import { options } from '../stores/options';
-  import type { Options, AIConfig, VectorDBConfig } from '../stores/options';
+  import type { Options, AIConfig, VectorDBConfig, CustomPrompts } from '../stores/options';
   import ConfirmDialog from './ConfirmDialog.svelte';
   import LLMInstructionsModal from './LLMInstructionsModal.svelte';
   import OllamaConfig from './OllamaConfig.svelte';
@@ -71,8 +71,37 @@
     }
   }
 
+  function handleCustomPromptChange(key: keyof CustomPrompts, value: string) {
+    options.setCustomPrompt(key, value);
+  }
+
+  function resetCustomPrompts() {
+    options.resetCustomPrompts();
+  }
+
   $: isDarkMode = document.documentElement.classList.contains('dark');
 </script>
+
+<style>
+  .custom-textarea {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(155, 155, 155, 0.5) transparent;
+  }
+
+  .custom-textarea::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .custom-textarea::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .custom-textarea::-webkit-scrollbar-thumb {
+    background-color: rgba(155, 155, 155, 0.5);
+    border-radius: 20px;
+    border: transparent;
+  }
+</style>
 
 <div class="space-y-8 p-6 bg-white dark:bg-gray-800 rounded-lg shadow-md">
   <div>
@@ -144,6 +173,48 @@
           <OpenAIConfig />
         {/if}
       {/if}
+    </div>
+  </div>
+
+  <div>
+    <h2 class="text-2xl font-bold mb-4 text-gray-800 dark:text-white">Custom Prompts</h2>
+    <div class="space-y-4">
+      <div>
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+          Flashcard Question Prompt
+          <textarea
+            bind:value={$options.customPrompts.flashcardQuestionPrompt}
+            on:change={() => handleCustomPromptChange('flashcardQuestionPrompt', $options.customPrompts.flashcardQuestionPrompt)}
+            class="custom-textarea mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 h-40 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 resize-none p-3 transition-all duration-200 ease-in-out hover:border-blue-300 dark:hover:border-blue-500"
+          ></textarea>
+        </label>
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+          Flashcard Answer Prompt
+          <textarea
+            bind:value={$options.customPrompts.flashcardAnswerPrompt}
+            on:change={() => handleCustomPromptChange('flashcardAnswerPrompt', $options.customPrompts.flashcardAnswerPrompt)}
+            class="custom-textarea mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 h-40 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 resize-none p-3 transition-all duration-200 ease-in-out hover:border-blue-300 dark:hover:border-blue-500"
+          ></textarea>
+        </label>
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+          Explanation Prompt
+          <textarea
+            bind:value={$options.customPrompts.explanationPrompt}
+            on:change={() => handleCustomPromptChange('explanationPrompt', $options.customPrompts.explanationPrompt)}
+            class="custom-textarea mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 h-40 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 resize-none p-3 transition-all duration-200 ease-in-out hover:border-blue-300 dark:hover:border-blue-500"
+          ></textarea>
+        </label>
+      </div>
+      <button
+        on:click={resetCustomPrompts}
+        class="px-4 py-2 bg-gray-300 text-gray-800 rounded hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-opacity-50 transition-all duration-200 ease-in-out"
+      >
+        Restore Default Prompts
+      </button>
     </div>
   </div>
 

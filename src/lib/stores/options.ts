@@ -29,12 +29,51 @@ export interface VectorDBConfig {
   pineconeIndex: string;
 }
 
+export interface CustomPrompts {
+  flashcardQuestionPrompt: string;
+  flashcardAnswerPrompt: string;
+  explanationPrompt: string;
+}
+
 export interface Options {
   openMaterialsInDefaultApp: boolean;
   simplifiedMaterialView: boolean;
   aiConfig: AIConfig;
   vectorDBConfig: VectorDBConfig;
+  customPrompts: CustomPrompts;
 }
+
+const defaultPrompts: CustomPrompts = {
+  flashcardQuestionPrompt: `Generate {numberOfCards} unique and diverse flashcard questions based on the following content. Follow these guidelines:
+
+- Each question should test a different key concept or fact from the content.
+- Ensure questions cover a wide range of topics within the content.
+- Use a variety of question types (e.g., "what", "how", "why", "explain", "compare", "analyze").
+- Questions should be clear, concise, and specific.
+- Avoid yes/no questions; prefer open-ended or fill-in-the-blank questions.
+- Output only the questions, one per line, without numbering, bullets, or additional text.
+
+Content:
+{content}
+
+Questions:`,
+  flashcardAnswerPrompt: `Provide a concise and accurate answer to the following question based on the given content. Follow these guidelines:
+
+- Answer should be clear, informative, and directly address the question.
+- Keep the answer concise, ideally 1-3 sentences.
+- Include key details or examples if necessary for clarity.
+- If the question asks to fill in a blank, provide the missing term or phrase.
+- Output only the answer, without any additional text, explanation, or numbering.
+
+Question: "{question}"
+
+Content:
+{content}
+
+Answer:`,
+  explanationPrompt: `Please explain the following answer to the question "{question}": {answer}. Provide a rich but brief explanation that is easy to understand. Answer with only the explanation and nothing else. Explanation:`,
+};
+
 
 const defaultOptions: Options = {
   openMaterialsInDefaultApp: false,
@@ -51,6 +90,7 @@ const defaultOptions: Options = {
     pineconeEnvironment: '',
     pineconeIndex: '',
   },
+  customPrompts: defaultPrompts,
 };
 
 function createOptionsStore() {
@@ -80,13 +120,41 @@ function createOptionsStore() {
     loadOptions: () => {
       const savedOptions = localStorage.getItem('studycraft_options');
       if (savedOptions) {
-        set(JSON.parse(savedOptions));
+        const parsedOptions = JSON.parse(savedOptions);
+        // Merge saved options with default options
+        const mergedOptions = {
+          ...defaultOptions,
+          ...parsedOptions,
+          aiConfig: {
+            ...defaultOptions.aiConfig,
+            ...parsedOptions.aiConfig,
+          },
+          vectorDBConfig: {
+            ...defaultOptions.vectorDBConfig,
+            ...parsedOptions.vectorDBConfig,
+          },
+          customPrompts: {
+            ...defaultOptions.customPrompts,
+            ...parsedOptions.customPrompts,
+          },
+        };
+        set(mergedOptions);
       }
     },
     saveOptions: (options: Options) => {
       localStorage.setItem('studycraft_options', JSON.stringify(options));
     },
+    setCustomPrompt: (key: keyof CustomPrompts, value: string) =>
+      update(opts => ({
+        ...opts,
+        customPrompts: { ...opts.customPrompts, [key]: value }
+      })),
+    resetCustomPrompts: () =>
+      update(opts => ({ ...opts, customPrompts: defaultPrompts })),
   };
 }
 
 export const options = createOptionsStore();
+
+// Initialize options when the module is imported
+options.loadOptions();
