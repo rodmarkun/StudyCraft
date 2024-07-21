@@ -205,19 +205,19 @@
   }
 </script>
 
-<div class="bg-white dark:bg-gray-800 shadow-lg rounded-lg overflow-hidden">
+<div class="bg-gray-50 dark:bg-gray-800 shadow-lg rounded-lg overflow-hidden">
   <CollectionHeader {name} on:deleteCollection={handleDeleteCollection} />
   
-  <div class="p-4 relative"
+  <div class="p-4 relative bg-white dark:bg-gray-800"
        on:dragenter={handleDragEnter}
        on:dragleave={handleDragLeave}
        on:dragover={handleDragOver}
        on:drop={handleDrop}>
     <div class="flex justify-between items-center mb-4">
-      <h3 class="text-xl font-semibold text-text-light dark:text-text-dark">Study Materials</h3>
+      <h3 class="text-xl font-semibold text-gray-800 dark:text-text-dark">Study Materials</h3>
       <button
         on:click={openAddStudyMaterialModal}
-        class="p-1 text-blue-500 hover:text-blue-600 focus:outline-none"
+        class="p-1 text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 focus:outline-none"
         title="Add Study Material"
       >
         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -234,7 +234,7 @@
         on:removeStudyMaterial={handleRemoveStudyMaterial}
       />
     {:else}
-      <div class="text-center py-8 text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 rounded-lg">
+      <div class="text-center py-8 text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 rounded-lg">
         <p>No study materials yet.</p>
         <p class="mt-2">You can drop files here to add study materials!</p>
       </div>
@@ -245,18 +245,18 @@
     {/if}
 
     {#if isDragging}
-      <div class="absolute inset-0 bg-blue-100 bg-opacity-90 dark:bg-blue-900 dark:bg-opacity-90 flex items-center justify-center z-10 border-2 border-dashed border-blue-500">
+      <div class="absolute inset-0 bg-blue-50 bg-opacity-90 dark:bg-blue-900 dark:bg-opacity-90 flex items-center justify-center z-10 border-2 border-dashed border-blue-500">
         <p class="text-2xl font-semibold text-blue-700 dark:text-blue-300">Drop files here to add study materials</p>
       </div>
     {/if}
   </div>
 
-  <div class="p-4 bg-gray-600 dark:bg-gray-600">
+  <div class="p-4 bg-gray-100 dark:bg-gray-700">
     <div class="flex justify-between items-center mb-4">
-      <h3 class="text-xl font-semibold text-text-dark dark:text-text-dark">Review Materials</h3>
+      <h3 class="text-xl font-semibold text-gray-800 dark:text-text-dark">Review Materials</h3>
       <button
         on:click={() => isAddingReviewMaterial = true}
-        class="p-1 text-blue-500 hover:text-blue-600 focus:outline-none"
+        class="p-1 text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 focus:outline-none"
         title="Add Review Material"
       >
         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -269,7 +269,7 @@
       <div class="mb-4 flex flex-col space-y-2">
         <select
           bind:value={reviewMaterialType}
-          class="p-2 border rounded text-text-light"
+          class="p-2 border rounded text-gray-800 dark:text-gray-200 bg-white dark:bg-gray-600"
         >
           <option value="deck">Flashcard Deck</option>
           <option value="test">Test</option>
@@ -278,7 +278,7 @@
           type="text"
           bind:value={newMaterialName}
           placeholder="Enter name"
-          class="p-2 border rounded text-text-light"
+          class="p-2 border rounded text-gray-800 dark:text-gray-200 bg-white dark:bg-gray-600"
         />
         <div class="flex space-x-2">
           <button
@@ -292,7 +292,7 @@
               isAddingReviewMaterial = false;
               newMaterialName = '';
             }}
-            class="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 flex-grow"
+            class="px-4 py-2 bg-gray-300 text-gray-800 dark:bg-gray-600 dark:text-gray-200 rounded hover:bg-gray-400 dark:hover:bg-gray-500 flex-grow"
           >
             Cancel
           </button>

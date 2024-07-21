@@ -39,7 +39,6 @@ export interface Options {
   openMaterialsInDefaultApp: boolean;
   simplifiedMaterialView: boolean;
   aiConfig: AIConfig;
-  vectorDBConfig: VectorDBConfig;
   customPrompts: CustomPrompts;
 }
 
@@ -84,12 +83,6 @@ const defaultOptions: Options = {
     runpod: { apiKey: '', serverlessApiId: '' },
     openai: { apiKey: '', model: 'text-davinci-003' },
   },
-  vectorDBConfig: {
-    provider: 'none',
-    pineconeApiKey: '',
-    pineconeEnvironment: '',
-    pineconeIndex: '',
-  },
   customPrompts: defaultPrompts,
 };
 
@@ -114,8 +107,6 @@ function createOptionsStore() {
           [provider]: { ...opts.aiConfig[provider], [key]: value }
         }
       })),
-    setVectorDBOption: <K extends keyof VectorDBConfig>(key: K, value: VectorDBConfig[K]) => 
-      update(opts => ({ ...opts, vectorDBConfig: { ...opts.vectorDBConfig, [key]: value } })),
     resetToDefaults: () => set(defaultOptions),
     loadOptions: () => {
       const savedOptions = localStorage.getItem('studycraft_options');
@@ -128,10 +119,6 @@ function createOptionsStore() {
           aiConfig: {
             ...defaultOptions.aiConfig,
             ...parsedOptions.aiConfig,
-          },
-          vectorDBConfig: {
-            ...defaultOptions.vectorDBConfig,
-            ...parsedOptions.vectorDBConfig,
           },
           customPrompts: {
             ...defaultOptions.customPrompts,

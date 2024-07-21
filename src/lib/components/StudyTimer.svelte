@@ -45,7 +45,8 @@
   }
 
   onMount(() => {
-    audio = new Audio('/src/assets/notification-sound.mp3'); // Replace with your actual sound file path
+    audio = new Audio('/src/assets/notification-sound.wav');
+    audio.volume = 0.2; // Set volume to 50%
     intervalId = setInterval(updateDisplay, 1000);
   });
 

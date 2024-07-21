@@ -20,7 +20,7 @@
   }
 </script>
 
-<div class="flex justify-between items-center p-4 bg-gray-600 dark:bg-gray-700 text-text-dark dark:text-text-dark">
+<div class="flex justify-between items-center p-4 bg-primary-dark dark:bg-gray-700 text-text-dark dark:text-text-dark">
   <h2 class="text-2xl font-semibold truncate flex-grow">{name}</h2>
   <button
     on:click={handleDeleteClick}
