@@ -64,6 +64,16 @@ async function saveCollections(collections: Collection[]): Promise<void> {
 function createCollectionsStore() {
   const { subscribe, set, update } = writable<Collection[]>([]);
 
+  function getUniqueName(name: string, existingNames: Set<string>): string {
+    let newName = name;
+    let counter = 1;
+    while (existingNames.has(newName)) {
+      newName = `${name} copy${counter > 1 ? ' ' + counter : ''}`;
+      counter++;
+    }
+    return newName;
+  }
+
   return {
     subscribe,
     initialize: async () => {
@@ -71,11 +81,26 @@ function createCollectionsStore() {
       set(loadedCollections);
     },
     addCollection: async (name: string) => {
-      update(cols => {
-        const newCols = [...cols, { id: Date.now().toString(), name, studyMaterials: [], reviewMaterials: [] }];
-        saveCollections(newCols);
+      let uniqueName = '';
+      await update(cols => {
+        const existingNames = new Set(cols.map(c => c.name));
+        uniqueName = getUniqueName(name, existingNames);
+        const newCollection = { 
+          id: Date.now().toString(), 
+          name: uniqueName, 
+          studyMaterials: [], 
+          reviewMaterials: [] 
+        };
+        const newCols = [...cols, newCollection];
+        saveCollections(newCols); // Save immediately after adding a new collection
         return newCols;
       });
+      try {
+        await window.electronAPI.createCollectionFolder(uniqueName);
+      } catch (error) {
+        console.error('Failed to create collection folder:', error);
+        throw new Error('Failed to create collection');
+      }
     },
     deleteCollection: async (id: string) => {
       update(cols => {
@@ -237,7 +262,59 @@ function createCollectionsStore() {
         saveCollections(newCols);
         return newCols;
       });
-    }
+    },
+    renameCollection: async (id: string, newName: string) => {
+      let oldName = '';
+      let collection: Collection | undefined;
+      
+      update(collections => {
+        collection = collections.find(c => c.id === id);
+        oldName = collection ? collection.name : '';
+        return collections;
+      });
+    
+      if (oldName && collection) {
+        try {
+          await window.electronAPI.renameCollectionFolder(oldName, newName);
+          
+          // Update file paths for study materials
+          const updatedStudyMaterials = collection.studyMaterials.map(material => {
+            if (material.filePath) {
+              const newFilePath = material.filePath.replace(oldName, newName);
+              return { ...material, filePath: newFilePath };
+            }
+            return material;
+          });
+    
+          update(collections => {
+            const newCollections = collections.map(col => 
+              col.id === id ? { ...col, name: newName, studyMaterials: updatedStudyMaterials } : col
+            );
+            saveCollections(newCollections); // Save after updating
+            return newCollections;
+          });
+        } catch (error) {
+          console.error('Failed to rename collection folder:', error);
+          throw new Error('Failed to rename collection');
+        }
+      }
+    },
+    importCollection: async (importedCollection: Collection) => {
+      let uniqueName = '';
+      await update(cols => {
+        const existingNames = new Set(cols.map(c => c.name));
+        uniqueName = getUniqueName(importedCollection.name, existingNames);
+        const newCollection = { ...importedCollection, name: uniqueName };
+        return [...cols, newCollection];
+      });
+      try {
+        await window.electronAPI.createCollectionFolder(uniqueName);
+        // You might want to add logic here to copy imported study materials
+      } catch (error) {
+        console.error('Failed to create folder for imported collection:', error);
+        throw new Error('Failed to import collection');
+      }
+    },
   };
 }
 

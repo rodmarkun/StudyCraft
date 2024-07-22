@@ -2,6 +2,7 @@
 <script lang="ts">
   import { deleteCollection, removeStudyMaterial, addStudyMaterials, addFlashcardDeck, removeFlashcardDeck, addTest, removeTest, updateTest } from '../stores/collections';
   import type { StudyMaterial, FlashcardDeck, Test, TestData } from '../stores/collections';
+  import { collections } from '../stores/collections';
   import MarkdownRenderer from './MarkdownRenderer.svelte';
   import StudyDeckModal from './StudyDeckModal.svelte';
   import EditDeckModal from './EditDeckModal.svelte';
@@ -203,10 +204,48 @@
       await handleMaterialsAdded({ detail: validMaterials } as CustomEvent<StudyMaterial[]>);
     }
   }
+
+  async function handleRenameCollection(event: CustomEvent<string>) {
+  const newName = event.detail;
+  try {
+    await collections.renameCollection(id, newName);
+    name = newName;
+  } catch (error) {
+    console.error('Failed to rename collection:', error);
+    alert('Failed to rename collection. Please try again.');
+  }
+}
+
+  function handleExportCollection() {
+    const exportData = JSON.stringify({ id, name, studyMaterials, reviewMaterials });
+    navigator.clipboard.writeText(exportData)
+      .then(() => alert("Collection data copied to clipboard!"))
+      .catch(err => console.error('Failed to copy: ', err));
+  }
+
+  function handleImportCollection() {
+    navigator.clipboard.readText()
+      .then(text => {
+        try {
+          const importedData = JSON.parse(text);
+          collections.importCollection(importedData);
+          alert("Collection imported successfully!");
+        } catch (error) {
+          alert("Invalid collection data. Please make sure you've copied the correct JSON.");
+        }
+      })
+      .catch(err => console.error('Failed to read clipboard: ', err));
+  }
 </script>
 
 <div class="bg-gray-50 dark:bg-gray-800 shadow-lg rounded-lg overflow-hidden">
-  <CollectionHeader {name} on:deleteCollection={handleDeleteCollection} />
+  <CollectionHeader 
+    {name} 
+    on:deleteCollection={handleDeleteCollection}
+    on:renameCollection={handleRenameCollection}
+    on:exportCollection={handleExportCollection}
+    on:importCollection={handleImportCollection}
+  />
   
   <div class="p-4 relative bg-white dark:bg-gray-800"
        on:dragenter={handleDragEnter}
@@ -361,6 +400,8 @@
 <EditTestModal
   test={editingTest}
   isOpen={editingTest !== null}
+  collectionId={id}
+  {studyMaterials}
   on:close={() => editingTest = null}
   on:update={handleTestUpdate}
 />

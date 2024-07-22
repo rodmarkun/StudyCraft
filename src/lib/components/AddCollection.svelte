@@ -1,7 +1,7 @@
 <!-- src/lib/components/AddCollection.svelte -->
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { addCollection } from '../stores/collections';
+  import { addCollection, collections } from '../stores/collections';
   import { writable } from 'svelte/store';
 
   const newCollectionName = writable('');
@@ -11,12 +11,17 @@
     focusInput();
   });
 
-  function handleSubmit() {
+  async function handleSubmit() {
     $newCollectionName = $newCollectionName.trim();
     if ($newCollectionName) {
-      addCollection($newCollectionName);
-      $newCollectionName = '';
-      focusInput();
+      try {
+        await addCollection($newCollectionName);
+        $newCollectionName = '';
+        focusInput();
+      } catch (error) {
+        console.error('Failed to add collection:', error);
+        alert('Failed to add collection. Please try again.');
+      }
     }
   }
 

@@ -22,16 +22,15 @@ export async function deleteFile(filePath: string): Promise<boolean> {
 export async function cleanPDFContent(filePath: string): Promise<string> {
   try {
     console.log('Extracting and cleaning PDF content from:', filePath);
+    // Ensure we're passing the file path, not the content
     const content = await window.electronAPI.parsePDF(filePath);
-    
+   
     // Simple cleaning of the extracted text
     const cleanedContent = content
       .replace(/(\r\n|\n|\r)/gm, " ") // Replace line breaks with spaces
       .replace(/\s+/g, " ") // Replace multiple spaces with single space
       .trim();
-
     console.log('PDF content extracted and cleaned successfully');
-    console.log(cleanedContent)
     return cleanedContent;
   } catch (error) {
     console.error('Error extracting and cleaning PDF content:', error);

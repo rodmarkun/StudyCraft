@@ -119,6 +119,7 @@ ipcMain.handle('saveFile', (event, content, fileName, collectionName) => {
 
   ipcMain.handle('parsePDF', async (event, filePath) => {
     try {
+      console.log('Parsing PDF file:', filePath); // Add this log
       const dataBuffer = fs.readFileSync(filePath);
       const data = await pdf(dataBuffer);
       return data.text;
@@ -187,6 +188,54 @@ ipcMain.handle('saveFile', (event, content, fileName, collectionName) => {
       console.error('Error fetching web content:', error);
       throw error;
     }
+  });
+
+  ipcMain.handle('renameCollectionFolder', async (event, oldName, newName) => {
+    const userDataPath = app.getPath('userData');
+    const oldPath = path.join(userDataPath, 'collections', oldName);
+    const newPath = path.join(userDataPath, 'collections', newName);
+    
+    return new Promise((resolve, reject) => {
+      fs.rename(oldPath, newPath, (err) => {
+        if (err) {
+          console.error('Error renaming collection folder:', err);
+          reject(err);
+        } else {
+          // Update file paths within the renamed folder
+          fs.readdir(newPath, (err, files) => {
+            if (err) {
+              console.error('Error reading directory:', err);
+              reject(err);
+            } else {
+              files.forEach(file => {
+                const oldFilePath = path.join(oldPath, file);
+                const newFilePath = path.join(newPath, file);
+                fs.rename(oldFilePath, newFilePath, err => {
+                  if (err) console.error('Error renaming file:', err);
+                });
+              });
+              resolve(true);
+            }
+          });
+        }
+      });
+    });
+  });
+  
+  ipcMain.handle('createCollectionFolder', async (event, name) => {
+    const userDataPath = app.getPath('userData');
+    const collectionPath = path.join(userDataPath, 'collections', name);
+    
+    return new Promise((resolve, reject) => {
+      fs.mkdir(collectionPath, { recursive: true }, (err) => {
+        if (err) {
+          console.error('Error creating collection folder:', err);
+          reject(err);
+        } else {
+          resolve(true);
+        }
+      });
+    });
   });
   
   ipcMain.on('exitApp', () => {

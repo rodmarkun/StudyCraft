@@ -33,6 +33,9 @@ export interface CustomPrompts {
   flashcardQuestionPrompt: string;
   flashcardAnswerPrompt: string;
   explanationPrompt: string;
+  testQuestionPrompt: string;
+  testFalseOptionsPrompt: string;
+  testTrueOptionPrompt: string;
 }
 
 export interface Options {
@@ -71,6 +74,51 @@ Content:
 
 Answer:`,
   explanationPrompt: `Please explain the following answer to the question "{question}": {answer}. Provide a rich but brief explanation that is easy to understand. Answer with only the explanation and nothing else. Explanation:`,
+  testQuestionPrompt: `Generate {numberOfQuestions} concise multiple-choice questions based on the content provided. Follow these guidelines:
+
+- Each question should focus on a single, specific concept from the content.
+- Keep questions brief, ideally no longer than 20 words.
+- Ensure questions are clear, unambiguous, and standalone (not relying on other questions).
+- Avoid overly complex or compound questions.
+- Use only the language of the provided content.
+- Do not include any lettering or numbering in the questions.
+
+Provide only the questions, one per line, without any additional text.
+
+Content:
+{content}
+
+Questions:`,
+
+testFalseOptionsPrompt: `For the following question, generate THREE brief, false but plausible answer options. Follow these guidelines:
+
+- Keep each option concise, ideally no longer than 15 words.
+- Ensure options are clearly incorrect but related to the topic.
+- Avoid obviously wrong or unrelated options.
+- Make options distinct from each other and from the correct answer.
+- Use only the language of the question.
+- Do not include any lettering or numbering in the options.
+
+Provide only the false options, one per line, without any additional text.
+
+Question: {question}
+
+False Options:`,
+
+testTrueOptionPrompt: `Provide a brief, correct answer for the following question. The answer should be:
+
+- Concise, ideally no longer than 15 words.
+- Directly addressing the question.
+- Clear and unambiguous.
+- In the same language as the question.
+- Distinct from the false options.
+- Do not include any lettering or numbering.
+
+Provide only the correct answer without any additional text.
+
+Question: {question}
+
+Correct Answer:`,
 };
 
 

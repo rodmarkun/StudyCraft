@@ -1,13 +1,21 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
   import ConfirmDialog from './ConfirmDialog.svelte';
+  import Popover from './Popover.svelte';
+  import { Cog } from 'lucide-svelte';
 
   export let name: string;
+
   const dispatch = createEventDispatcher();
+  
   let showConfirmDialog = false;
+  let showOptionsPopover = false;
+  let showRenameInput = false;
+  let newName = '';
 
   function handleDeleteClick() {
     showConfirmDialog = true;
+    showOptionsPopover = false;
   }
 
   function handleConfirmDelete() {
@@ -18,19 +26,82 @@
   function handleCancelDelete() {
     showConfirmDialog = false;
   }
+
+  function handleRenameCollection() {
+    showRenameInput = true;
+    showOptionsPopover = false;
+    newName = name;
+  }
+
+  function confirmRename() {
+    if (newName && newName !== name) {
+      dispatch('renameCollection', newName);
+    }
+    showRenameInput = false;
+  }
+
+  function handleExportCollection() {
+    dispatch('exportCollection');
+    showOptionsPopover = false;
+  }
+
+  function handleImportCollection() {
+    dispatch('importCollection');
+    showOptionsPopover = false;
+  }
+
+  function toggleOptionsPopover() {
+    showOptionsPopover = !showOptionsPopover;
+  }
 </script>
 
 <div class="flex justify-between items-center p-4 bg-primary-dark dark:bg-gray-700 text-text-dark dark:text-text-dark">
-  <h2 class="text-2xl font-semibold truncate flex-grow">{name}</h2>
-  <button
-    on:click={handleDeleteClick}
-    class="p-1 ml-2 text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 focus:outline-none"
-    title="Delete Collection"
-  >
-    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-    </svg>
-  </button>
+  {#if showRenameInput}
+    <input
+      bind:value={newName}
+      on:keydown={(e) => e.key === 'Enter' && confirmRename()}
+      on:blur={confirmRename}
+      class="text-2xl font-semibold truncate flex-grow bg-transparent border-b border-gray-300 dark:border-gray-600 focus:outline-none focus:border-blue-500"
+    />
+  {:else}
+    <h2 class="text-2xl font-semibold truncate flex-grow">{name}</h2>
+  {/if}
+  <Popover bind:open={showOptionsPopover} width="w-48">
+    <button
+      slot="trigger"
+      on:click={toggleOptionsPopover}
+      class="p-1 ml-2 text-gray-200 hover:text-white focus:outline-none"
+      title="Collection Options"
+    >
+      <Cog size={20} />
+    </button>
+    <div class="py-2">
+      <button
+        on:click={handleRenameCollection}
+        class="block w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200"
+      >
+        Rename Collection
+      </button>
+      <button
+        on:click={handleExportCollection}
+        class="block w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200"
+      >
+        Export Collection
+      </button>
+      <button
+        on:click={handleImportCollection}
+        class="block w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200"
+      >
+        Import Collection
+      </button>
+      <button
+        on:click={handleDeleteClick}
+        class="block w-full text-left px-4 py-2 text-red-500 hover:bg-gray-100 dark:hover:bg-gray-600"
+      >
+        Remove Collection
+      </button>
+    </div>
+  </Popover>
 </div>
 
 {#if showConfirmDialog}

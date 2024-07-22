@@ -24,4 +24,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   exitApp: () => ipcRenderer.send('exitApp'),
   parsePDF: (filePath) => ipcRenderer.invoke('parsePDF', filePath),
   fetchWebContent: (url) => ipcRenderer.invoke('fetchWebContent', url),
+  renameCollectionFolder: (oldName, newName) => ipcRenderer.invoke('renameCollectionFolder', oldName, newName),
+  createCollectionFolder: (name) => ipcRenderer.invoke('createCollectionFolder', name),
 });
