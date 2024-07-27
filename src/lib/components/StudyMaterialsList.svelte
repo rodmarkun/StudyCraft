@@ -1,25 +1,29 @@
-<!-- src/lib/components/StudyMaterialsList.svelte -->
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
+  import { options } from '../stores/options';
   import type { StudyMaterial } from '../stores/collections';
   import { loadStudyMaterialContent } from '../stores/collections';
   import { deleteFile } from '../utils/fileUtils';
+  import { Trash2, AlertCircle, FileText, Globe, FileType } from 'lucide-svelte';
 
   export let studyMaterials: StudyMaterial[];
   export let collectionId: string;
 
   const dispatch = createEventDispatcher();
 
+  let showDeleteConfirm = false;
+  let materialToDelete: StudyMaterial | null = null;
+
   function getIcon(type: 'pdf' | 'markdown' | 'webpage') {
     switch (type) {
       case 'pdf':
-        return '📄';
+        return FileType;
       case 'markdown':
-        return '📝';
+        return FileText;
       case 'webpage':
-        return '🌐';
+        return Globe;
       default:
-        return '📎';
+        return FileText;
     }
   }
 
@@ -53,42 +57,95 @@
     }
   }
 
-  async function handleRemoveFile(material: StudyMaterial) {
-    if (confirm(`Are you sure you want to remove "${material.name}"?`)) {
-      try {
-        if (material.filePath) {
-          await deleteFile(material.filePath);
-        }
-        dispatch('removeStudyMaterial', { collectionId, materialName: material.name });
-      } catch (error) {
-        console.error('Error deleting file:', error);
-        alert(`There was an error deleting the file: ${error.message}`);
+  function confirmDelete(material: StudyMaterial) {
+    materialToDelete = material;
+    showDeleteConfirm = true;
+  }
+
+  async function handleRemoveFile() {
+    if (!materialToDelete) return;
+
+    try {
+      if (materialToDelete.filePath) {
+        await deleteFile(materialToDelete.filePath);
       }
+      dispatch('removeStudyMaterial', { collectionId, materialName: materialToDelete.name });
+    } catch (error) {
+      console.error('Error deleting file:', error);
+      alert(`There was an error deleting the file: ${error.message}`);
+    } finally {
+      showDeleteConfirm = false;
+      materialToDelete = null;
     }
   }
 </script>
 
-<div class="space-y-2">
+<div class={$options.simplifiedMaterialView ? 'space-y-2' : 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6'}>
   {#each studyMaterials as material (material.id)}
-    <div
-      class="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-700 rounded cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600"
-      on:click={() => handleViewFile(material)}
-    >
-      <div class="flex items-center">
-        <span class="text-2xl mr-2">{getIcon(material.type)}</span>
-        <span class="text-text-light dark:text-text-dark">
-          {getMaterialName(material)}
-        </span>
-      </div>
-      <button
-        on:click|stopPropagation={() => handleRemoveFile(material)}
-        class="p-1 text-red-500 hover:text-red-700 focus:outline-none"
-        title="Remove"
+    {#if $options.simplifiedMaterialView}
+      <div
+        class="flex items-center justify-between p-2 bg-white dark:bg-gray-800 rounded shadow-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-150"
+        on:click={() => handleViewFile(material)}
       >
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-        </svg>
-      </button>
-    </div>
+        <div class="flex items-center">
+          <svelte:component this={getIcon(material.type)} size={24} class="mr-2 text-gray-600 dark:text-gray-300" />
+          <span class="text-gray-800 dark:text-gray-200">
+            {getMaterialName(material)}
+          </span>
+        </div>
+        <button
+          on:click|stopPropagation={() => confirmDelete(material)}
+          class="p-1 text-gray-500 hover:text-red-500 dark:text-gray-400 dark:hover:text-red-400 focus:outline-none transition-colors duration-150"
+          title="Remove"
+        >
+          <Trash2 size={20} />
+        </button>
+      </div>
+    {:else}
+      <div class="relative group bg-gray-100 dark:bg-gray-700 rounded-lg shadow-md overflow-hidden transition-all duration-300 hover:shadow-lg hover:scale-105">
+        <div
+          class="aspect-square flex flex-col items-center justify-center cursor-pointer p-4"
+          on:click={() => handleViewFile(material)}
+        >
+          <svelte:component this={getIcon(material.type)} size={64} class="text-gray-600 dark:text-gray-300 mb-4" />
+          <h3 class="text-sm font-medium text-gray-800 dark:text-white text-center line-clamp-3">{getMaterialName(material)}</h3>
+        </div>
+        <button
+          on:click|stopPropagation={() => confirmDelete(material)}
+          class="absolute top-2 right-2 p-2 bg-white dark:bg-gray-600 text-gray-600 dark:text-gray-300 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-300 hover:bg-gray-200 dark:hover:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-300 dark:focus:ring-gray-400"
+          title="Remove"
+        >
+          <Trash2 size={16} />
+        </button>
+      </div>
+    {/if}
   {/each}
 </div>
+
+{#if showDeleteConfirm}
+  <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-xl max-w-sm w-full">
+      <div class="flex items-center mb-4">
+        <AlertCircle class="text-gray-600 dark:text-gray-300 mr-2" size={24} />
+        <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Confirm Deletion</h3>
+      </div>
+      <p class="text-gray-700 dark:text-gray-300 mb-4">
+        Are you sure you want to delete "{materialToDelete?.name}"? This action cannot be undone.
+      </p>
+      <div class="flex justify-end space-x-4">
+        <button
+          on:click={() => showDeleteConfirm = false}
+          class="px-4 py-2 bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-gray-200 rounded hover:bg-gray-300 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-300 dark:focus:ring-gray-500"
+        >
+          Cancel
+        </button>
+        <button
+          on:click={handleRemoveFile}
+          class="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-300 dark:focus:ring-red-500"
+        >
+          Delete
+        </button>
+      </div>
+    </div>
+  </div>
+{/if}
