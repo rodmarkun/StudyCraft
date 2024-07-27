@@ -146,7 +146,7 @@ function cleanResponse(response: string): string {
 
 export async function generateFlashcards(content: string, numberOfCards: number): Promise<Array<{question: string, answer: string}>> {
     // Remove the PDF cleaning step here, as it's now done before calling this function
-    const chunkSize = 2000;
+    const chunkSize = 3000;
     const chunks = splitContent(content, chunkSize);
     const flashcards: Array<{question: string, answer: string}> = [];
     const usedQuestions = new Set<string>();
@@ -161,6 +161,8 @@ export async function generateFlashcards(content: string, numberOfCards: number)
         const chunkPrompt = customPrompts.flashcardQuestionPrompt
             .replace('{numberOfCards}', Math.min(remainingCards, 5).toString())
             .replace('{content}', chunk);
+
+        console.log("Content used for this flashcard:", chunk);
 
         const questionsResponse = await getLLMResponse(chunkPrompt);
         const questions = questionsResponse.split('\n')
@@ -186,71 +188,6 @@ export async function generateFlashcards(content: string, numberOfCards: number)
     }
 
     return flashcards;
-}
-
-export async function generateTestQuestions(content: string, numberOfQuestions: number): Promise<Array<{question: string, options: string[], correctOptionIndex: number}>> {
-    const chunkSize = 4000;
-    const chunks = splitContent(content, chunkSize);
-    const questions: Array<{question: string, options: string[], correctOptionIndex: number}> = [];
-    const usedQuestions = new Set<string>();
-
-    const currentOptions = getCurrentOptions();
-    const { customPrompts } = currentOptions;
-
-    for (const chunk of chunks) {
-        const remainingQuestions = numberOfQuestions - questions.length;
-        if (remainingQuestions <= 0) break;
-
-        const questionsPrompt = customPrompts.testQuestionPrompt
-            .replace('{numberOfQuestions}', Math.min(remainingQuestions, 3).toString())
-            .replace('{content}', chunk);
-
-        const questionsResponse = await getLLMResponse(questionsPrompt);
-        const generatedQuestions = questionsResponse.split('\n')
-            .map(q => cleanResponse(q))
-            .filter(q => q.trim() !== '');
-
-        for (const questionText of generatedQuestions) {
-            if (usedQuestions.has(questionText.toLowerCase())) continue;
-
-            const falseOptionsPrompt = customPrompts.testFalseOptionsPrompt
-                .replace('{question}', questionText)
-                .replace('{content}', chunk);
-
-            const falseOptionsResponse = await getLLMResponse(falseOptionsPrompt);
-            const falseOptions = falseOptionsResponse.split('\n')
-                .map(o => cleanResponse(o))
-                .filter(o => o.trim() !== '')
-                .slice(0, 3);
-
-            const trueOptionPrompt = customPrompts.testTrueOptionPrompt
-                .replace('{question}', questionText)
-                .replace('{content}', chunk);
-
-            const trueOptionResponse = await getLLMResponse(trueOptionPrompt);
-            const trueOption = cleanResponse(trueOptionResponse);
-
-            const options = [...new Set([...falseOptions, trueOption])];
-            if (options.length < 4) continue; // Skip if we don't have enough unique options
-
-            let correctOptionIndex = options.indexOf(trueOption);
-
-            // Shuffle the options
-            for (let i = options.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [options[i], options[j]] = [options[j], options[i]];
-                if (i === correctOptionIndex) correctOptionIndex = j;
-                else if (j === correctOptionIndex) correctOptionIndex = i;
-            }
-
-            questions.push({ question: questionText, options, correctOptionIndex });
-            usedQuestions.add(questionText.toLowerCase());
-
-            if (questions.length >= numberOfQuestions) break;
-        }
-    }
-
-    return questions;
 }
 
 function splitContent(content: string, chunkSize: number): string[] {

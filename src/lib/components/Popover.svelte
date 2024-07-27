@@ -1,15 +1,22 @@
 <script lang="ts">
-  import { createEventDispatcher, onMount } from 'svelte';
+  import { createEventDispatcher, onMount, onDestroy } from 'svelte';
+
   export let open = false;
   export let width = 'w-64';
   export let customClass = '';
+
   const dispatch = createEventDispatcher();
 
   let triggerEl: HTMLElement;
   let popoverEl: HTMLElement;
 
   function handleClickOutside(event: MouseEvent) {
-    if (open && popoverEl && !popoverEl.contains(event.target as Node) && !triggerEl.contains(event.target as Node)) {
+    if (!open) return;
+    
+    if (popoverEl && !popoverEl.contains(event.target as Node) && !triggerEl.contains(event.target as Node)) {
+      event.preventDefault();
+      event.stopPropagation();
+      open = false;
       dispatch('close');
     }
   }
@@ -19,11 +26,9 @@
       const rect = triggerEl.getBoundingClientRect();
       const scrollY = window.scrollY || window.pageYOffset;
       const scrollX = window.scrollX || window.pageXOffset;
-
       popoverEl.style.position = 'fixed';
       popoverEl.style.top = `${rect.bottom + scrollY}px`;
       popoverEl.style.left = `${rect.left + scrollX}px`;
-
       // Adjust if popover is off-screen
       const popoverRect = popoverEl.getBoundingClientRect();
       if (popoverRect.right > window.innerWidth) {
@@ -36,18 +41,19 @@
   }
 
   onMount(() => {
+    document.addEventListener('click', handleClickOutside, true);
     window.addEventListener('scroll', positionPopover);
-    return () => {
-      window.removeEventListener('scroll', positionPopover);
-    };
+  });
+
+  onDestroy(() => {
+    document.removeEventListener('click', handleClickOutside, true);
+    window.removeEventListener('scroll', positionPopover);
   });
 
   $: if (open) {
     setTimeout(positionPopover, 0);
   }
 </script>
-
-<svelte:window on:click={handleClickOutside} />
 
 <div class="relative inline-block" bind:this={triggerEl}>
   <div class="popover-trigger">
@@ -72,15 +78,12 @@
     scrollbar-width: thin;
     scrollbar-color: rgba(155, 155, 155, 0.5) transparent;
   }
-
   .popover-content::-webkit-scrollbar {
     width: 6px;
   }
-
   .popover-content::-webkit-scrollbar-track {
     background: transparent;
   }
-
   .popover-content::-webkit-scrollbar-thumb {
     background-color: rgba(155, 155, 155, 0.5);
     border-radius: 20px;

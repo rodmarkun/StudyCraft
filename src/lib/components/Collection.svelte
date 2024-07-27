@@ -6,8 +6,6 @@
   import MarkdownRenderer from './MarkdownRenderer.svelte';
   import StudyDeckModal from './StudyDeckModal.svelte';
   import EditDeckModal from './EditDeckModal.svelte';
-  import StudyTestModal from './StudyTestModal.svelte';
-  import EditTestModal from './EditTestModal.svelte';
   import Modal from './Modal.svelte';
   import AddStudyMaterialModal from './AddStudyMaterialModal.svelte';
   import CollectionHeader from './CollectionHeader.svelte';
@@ -127,17 +125,7 @@
         };
         addFlashcardDeck(id, newDeck);
         reviewMaterials = [...reviewMaterials, newDeck];
-      } else if (reviewMaterialType === 'test') {
-        const newTest: Test = {
-          id: Date.now().toString(),
-          name: newMaterialName.trim(),
-          questions: []
-        };
-        addTest(id, newTest);
-        reviewMaterials = [...reviewMaterials, newTest];
       }
-      newMaterialName = '';
-      isAddingReviewMaterial = false;
     } else {
       alert('Please provide a name for the new material.');
     }
@@ -292,7 +280,7 @@
 
   <div class="p-4 bg-gray-100 dark:bg-gray-700">
     <div class="flex justify-between items-center mb-4">
-      <h3 class="text-xl font-semibold text-gray-800 dark:text-text-dark">Review Materials</h3>
+      <h3 class="text-xl font-semibold text-gray-800 dark:text-text-dark">Flashcard Decks</h3>
       <button
         on:click={() => isAddingReviewMaterial = true}
         class="p-1 text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 focus:outline-none"
@@ -306,13 +294,6 @@
 
     {#if isAddingReviewMaterial}
       <div class="mb-4 flex flex-col space-y-2">
-        <select
-          bind:value={reviewMaterialType}
-          class="p-2 border rounded text-gray-800 dark:text-gray-200 bg-white dark:bg-gray-600"
-        >
-          <option value="deck">Flashcard Deck</option>
-          <option value="test">Test</option>
-        </select>
         <input
           type="text"
           bind:value={newMaterialName}
@@ -389,19 +370,4 @@
   {studyMaterials}
   on:close={closeEditDeck}
   on:update={handleDeckUpdate}
-/>
-
-<StudyTestModal 
-  test={studyingTest}
-  isOpen={studyingTest !== null}
-  on:close={() => studyingTest = null}
-/>
-
-<EditTestModal
-  test={editingTest}
-  isOpen={editingTest !== null}
-  collectionId={id}
-  {studyMaterials}
-  on:close={() => editingTest = null}
-  on:update={handleTestUpdate}
 />

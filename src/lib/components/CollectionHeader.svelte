@@ -5,9 +5,8 @@
   import { Cog } from 'lucide-svelte';
 
   export let name: string;
-
   const dispatch = createEventDispatcher();
-  
+ 
   let showConfirmDialog = false;
   let showOptionsPopover = false;
   let showRenameInput = false;
@@ -38,16 +37,6 @@
       dispatch('renameCollection', newName);
     }
     showRenameInput = false;
-  }
-
-  function handleExportCollection() {
-    dispatch('exportCollection');
-    showOptionsPopover = false;
-  }
-
-  function handleImportCollection() {
-    dispatch('importCollection');
-    showOptionsPopover = false;
   }
 
   function toggleOptionsPopover() {
@@ -81,18 +70,6 @@
         class="block w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200"
       >
         Rename Collection
-      </button>
-      <button
-        on:click={handleExportCollection}
-        class="block w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200"
-      >
-        Export Collection
-      </button>
-      <button
-        on:click={handleImportCollection}
-        class="block w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200"
-      >
-        Import Collection
       </button>
       <button
         on:click={handleDeleteClick}

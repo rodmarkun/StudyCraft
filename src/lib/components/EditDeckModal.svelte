@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte';
+  import { onMount, onDestroy, createEventDispatcher } from 'svelte';
+  import { Brain } from 'lucide-svelte';
   import type { FlashcardDeck, Flashcard, StudyMaterial } from '../stores/collections';
   import Modal from './Modal.svelte';
   import Popover from './Popover.svelte';
@@ -8,6 +9,7 @@
   import { loadStudyMaterialContent } from '../stores/collections';
   import { scrapeWebsite } from '../services/webScraperService';
   import { cleanPDFContent } from '../utils/fileUtils';
+  import { options } from '../stores/options';
 
   export let deck: FlashcardDeck | null;
   export let isOpen: boolean;
@@ -24,6 +26,18 @@
   let selectedMaterialId = '';
   let isGenerating = false;
   let isGeneratePopoverOpen = false;
+  let isLLMConfigured = false;
+  let unsubscribe: () => void;
+
+  onMount(() => {
+    unsubscribe = options.subscribe(value => {
+      isLLMConfigured = value.aiConfig.provider !== 'none';
+    });
+  });
+
+  onDestroy(() => {
+    if (unsubscribe) unsubscribe();
+  });
 
   $: if (deck) {
     editedDeck = JSON.parse(JSON.stringify(deck));
@@ -116,10 +130,7 @@
         throw new Error('Unsupported material type');
       }
 
-      // Pass the content directly, not the material type
       const generatedCards = await generateFlashcards(content, numberOfCardsToGenerate);
-
-
 
       const existingQuestions = new Set(editedDeck.flashcards.map(card => card.question.toLowerCase()));
 
@@ -180,9 +191,17 @@
             <button
               slot="trigger"
               on:click={toggleGeneratePopover}
-              class="px-4 py-2 bg-purple-500 text-white rounded hover:bg-purple-600"
+              class="flex items-center px-4 py-2 bg-purple-500 text-white rounded hover:bg-purple-600 transition-colors duration-200 {isLLMConfigured && !isGenerating ? 'hover:bg-purple-600' : 'opacity-50 cursor-not-allowed'}"
+              disabled={!isLLMConfigured || isGenerating}
             >
-              Generate Flashcards
+              <Brain class="mr-2" size={20} />
+              {#if !isLLMConfigured}
+                LLM Not Configured
+              {:else if isGenerating}
+                Generating...
+              {:else}
+                Generate Flashcards
+              {/if}
             </button>
             <div class="p-4 space-y-4">
               <h3 class="text-lg font-semibold mb-2 text-gray-800 dark:text-white">Generate Flashcards</h3>
@@ -214,9 +233,10 @@
               </div>
               <button
                 on:click={handleGenerateFlashcards}
-                class="w-full px-4 py-2 bg-indigo-500 text-white rounded hover:bg-indigo-600"
-                disabled={isGenerating || !selectedMaterialId}
+                class="w-full px-4 py-2 bg-indigo-500 text-white rounded hover:bg-indigo-600 flex items-center justify-center {isLLMConfigured && !isGenerating && selectedMaterialId ? 'hover:bg-indigo-600' : 'opacity-50 cursor-not-allowed'}"
+                disabled={!isLLMConfigured || isGenerating || !selectedMaterialId}
               >
+                <Brain class="mr-2" size={20} />
                 {isGenerating ? 'Generating...' : 'Generate Flashcards'}
               </button>
             </div>
