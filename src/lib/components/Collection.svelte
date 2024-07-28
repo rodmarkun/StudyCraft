@@ -116,20 +116,22 @@
   }
 
   function handleAddReviewMaterial() {
-    if (newMaterialName.trim()) {
-      if (reviewMaterialType === 'deck') {
-        const newDeck: FlashcardDeck = {
-          id: Date.now().toString(),
-          name: newMaterialName.trim(),
-          flashcards: []
-        };
-        addFlashcardDeck(id, newDeck);
-        reviewMaterials = [...reviewMaterials, newDeck];
-      }
-    } else {
-      alert('Please provide a name for the new material.');
-    }
+  if (newMaterialName.trim()) {
+    const newDeck: FlashcardDeck = {
+      id: Date.now().toString(),
+      name: newMaterialName.trim(),
+      flashcards: []
+    };
+    addFlashcardDeck(id, newDeck);
+    reviewMaterials = [...reviewMaterials, newDeck];
+    
+    // Reset the state after adding the new deck
+    isAddingReviewMaterial = false;
+    newMaterialName = '';
+  } else {
+    alert('Please provide a name for the new material.');
   }
+}
 
   function handleTestUpdate(event: CustomEvent<Test>) {
     const updatedTest = event.detail;

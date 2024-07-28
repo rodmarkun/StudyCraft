@@ -80,6 +80,14 @@
   }
 </script>
 
+<style>
+  .break-words {
+    word-break: break-word;
+    overflow-wrap: break-word;
+    hyphens: auto;
+  }
+</style>
+
 <div class={$options.simplifiedMaterialView ? 'space-y-2' : 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6'}>
   {#each studyMaterials as material (material.id)}
     {#if $options.simplifiedMaterialView}
@@ -87,15 +95,15 @@
         class="flex items-center justify-between p-2 bg-white dark:bg-gray-800 rounded shadow-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-150"
         on:click={() => handleViewFile(material)}
       >
-        <div class="flex items-center">
-          <svelte:component this={getIcon(material.type)} size={24} class="mr-2 text-gray-600 dark:text-gray-300" />
-          <span class="text-gray-800 dark:text-gray-200">
+        <div class="flex items-center flex-grow min-w-0">
+          <svelte:component this={getIcon(material.type)} size={24} class="flex-shrink-0 mr-2 text-gray-600 dark:text-gray-300" />
+          <span class="text-gray-800 dark:text-gray-200 truncate break-words">
             {getMaterialName(material)}
           </span>
         </div>
         <button
           on:click|stopPropagation={() => confirmDelete(material)}
-          class="p-1 text-gray-500 hover:text-red-500 dark:text-gray-400 dark:hover:text-red-400 focus:outline-none transition-colors duration-150"
+          class="flex-shrink-0 p-1 ml-2 text-gray-500 hover:text-red-500 dark:text-gray-400 dark:hover:text-red-400 focus:outline-none transition-colors duration-150"
           title="Remove"
         >
           <Trash2 size={20} />
@@ -108,7 +116,7 @@
           on:click={() => handleViewFile(material)}
         >
           <svelte:component this={getIcon(material.type)} size={64} class="text-gray-600 dark:text-gray-300 mb-4" />
-          <h3 class="text-sm font-medium text-gray-800 dark:text-white text-center line-clamp-3">{getMaterialName(material)}</h3>
+          <h3 class="text-sm font-medium text-gray-800 dark:text-white text-center break-words line-clamp-3 w-full">{getMaterialName(material)}</h3>
         </div>
         <button
           on:click|stopPropagation={() => confirmDelete(material)}
