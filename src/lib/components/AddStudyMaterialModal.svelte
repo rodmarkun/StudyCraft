@@ -1,4 +1,3 @@
-<!-- src/lib/components/AddStudyMaterialModal.svelte -->
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
   import Modal from './Modal.svelte';
@@ -12,73 +11,97 @@
 
   const dispatch = createEventDispatcher();
 
-  let materials = [{ type: 'markdown', file: null, url: '', name: '' }];
+  let webpageUrl = '';
   let errorMessage = '';
-  let uploadedFiles = new Set();
+  let uploadedFiles: File[] = [];
+  let isDragging = false;
+  let dragCounter = 0;
 
-  function addMaterial() {
-    materials = [...materials, { type: 'markdown', file: null, url: '', name: '' }];
+  function handleDragEnter(event: DragEvent) {
+    event.preventDefault();
+    dragCounter++;
+    isDragging = true;
   }
 
-  function removeMaterial(index: number) {
-    const removedMaterial = materials[index];
-    if (removedMaterial.file) {
-      uploadedFiles.delete(removedMaterial.file.name);
+  function handleDragLeave(event: DragEvent) {
+    event.preventDefault();
+    dragCounter--;
+    if (dragCounter === 0) {
+      isDragging = false;
     }
-    materials = materials.filter((_, i) => i !== index);
   }
 
-  async function handleFileChange(event: Event, index: number) {
+  function handleDragOver(event: DragEvent) {
+    event.preventDefault();
+    event.dataTransfer!.dropEffect = 'copy';
+  }
+
+  function handleDrop(event: DragEvent) {
+    event.preventDefault();
+    isDragging = false;
+    dragCounter = 0;
+    const files = Array.from(event.dataTransfer!.files);
+    handleFiles(files);
+  }
+
+  function handleFileInput(event: Event) {
     const input = event.target as HTMLInputElement;
-    if (input.files && input.files[0]) {
-      const file = input.files[0];
-      if (uploadedFiles.has(file.name)) {
-        errorMessage = `File "${file.name}" has already been added. Please choose a different file.`;
-        input.value = ''; // Reset the input
-        return;
-      }
-      materials[index].file = file;
-      materials[index].name = file.name;
-      uploadedFiles.add(file.name);
-      materials = [...materials];
-      errorMessage = '';
+    if (input.files) {
+      const files = Array.from(input.files);
+      handleFiles(files);
     }
+  }
+
+  function handleFiles(files: File[]) {
+    const newFiles = files.filter(file => !uploadedFiles.some(f => f.name === file.name));
+    uploadedFiles = [...uploadedFiles, ...newFiles];
+    errorMessage = '';
+  }
+
+  function removeFile(fileName: string) {
+    uploadedFiles = uploadedFiles.filter(file => file.name !== fileName);
   }
 
   async function handleSubmit() {
     try {
       errorMessage = '';
-      const processedMaterials: StudyMaterial[] = await Promise.all(materials.map(async (m) => {
-        const id = Date.now().toString() + Math.random().toString(36).substr(2, 9);
-        if (m.type === 'markdown' && m.file) {
-          const content = await m.file.text();
-          const filePath = await window.electronAPI.saveFile(content, m.name, name);
-          return { id, type: 'markdown', filePath, name: m.name };
-        } else if (m.type === 'webpage' && m.url) {
-          if (!isValidUrl(m.url)) {
-            throw new Error(`Invalid URL: ${m.url}`);
-          }
-          const websiteTitle = await getWebsiteTitle(m.url);
-          return { id, type: 'webpage', url: m.url, name: websiteTitle };
-        } else if (m.type === 'pdf' && m.file) {
-          const content = await m.file.arrayBuffer();
-          const filePath = await window.electronAPI.saveFile(content, m.name, name);
-          return { id, type: 'pdf', filePath, name: m.name };
-        }
-        throw new Error(`Invalid material type or missing required data for ${m.name || 'unnamed material'}`);
-      }));
+      const processedMaterials: StudyMaterial[] = [];
 
-      const validMaterials = processedMaterials.filter(m => 
-        (m.type === 'markdown' && m.filePath) || 
-        (m.type === 'webpage' && m.url) || 
-        (m.type === 'pdf' && m.filePath)
-      );
-      
-      if (validMaterials.length === 0) {
+      // Process webpage
+      if (webpageUrl) {
+        if (!isValidUrl(webpageUrl)) {
+          throw new Error(`Invalid URL: ${webpageUrl}`);
+        }
+        const websiteTitle = await getWebsiteTitle(webpageUrl);
+        processedMaterials.push({
+          id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+          type: 'webpage',
+          url: webpageUrl,
+          name: websiteTitle
+        });
+      }
+
+      // Process files
+      for (const file of uploadedFiles) {
+        const id = Date.now().toString() + Math.random().toString(36).substr(2, 9);
+        if (file.name.endsWith('.md')) {
+          const content = await file.text();
+          const filePath = await window.electronAPI.saveFile(content, file.name, name);
+          processedMaterials.push({ id, type: 'markdown', filePath, name: file.name });
+        } else if (file.name.endsWith('.pdf')) {
+          const content = await file.arrayBuffer();
+          const filePath = await window.electronAPI.saveFile(content, file.name, name);
+          processedMaterials.push({ id, type: 'pdf', filePath, name: file.name });
+        } else {
+          console.warn(`Skipping unsupported file type: ${file.name}`);
+        }
+      }
+
+      if (processedMaterials.length === 0) {
         throw new Error('No valid materials to add');
       }
 
-      dispatch('materialsAdded', validMaterials);
+      dispatch('materialsAdded', processedMaterials);
       close();
     } catch (error) {
       console.error('Error processing materials:', error);
@@ -87,9 +110,9 @@
   }
 
   function close() {
-    materials = [{ type: 'markdown', file: null, url: '', name: '' }];
+    webpageUrl = '';
+    uploadedFiles = [];
     errorMessage = '';
-    uploadedFiles.clear();
     dispatch('close');
   }
 
@@ -104,64 +127,74 @@
 </script>
 
 <Modal {isOpen} title="Add Study Materials" on:close={close}>
-<div class="space-y-4">
-  {#if errorMessage}
-    <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
-      <strong class="font-bold">Error!</strong>
-      <span class="block sm:inline">{errorMessage}</span>
-    </div>
-  {/if}
+  <div class="space-y-4">
+    {#if errorMessage}
+      <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+        <strong class="font-bold">Error!</strong>
+        <span class="block sm:inline">{errorMessage}</span>
+      </div>
+    {/if}
 
-  {#each materials as material, index}
-    <div class="border p-4 rounded">
-      <select 
-        bind:value={material.type} 
-        class="w-full p-2 mb-2 border rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+    <div class="space-y-2">
+      <label for="webpageUrl" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Add Webpage URL</label>
+      <input
+        type="url"
+        id="webpageUrl"
+        bind:value={webpageUrl}
+        placeholder="https://example.com"
+        class="w-full p-2 border rounded text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+      />
+    </div>
+
+    <div
+      class="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 text-center"
+      on:dragenter={handleDragEnter}
+      on:dragleave={handleDragLeave}
+      on:dragover={handleDragOver}
+      on:drop={handleDrop}
+    >
+      <input
+        type="file"
+        id="fileInput"
+        multiple
+        accept=".md,.pdf"
+        on:change={handleFileInput}
+        class="hidden"
+      />
+      <label
+        for="fileInput"
+        class="cursor-pointer text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
       >
-        <option value="markdown">Markdown File</option>
-        <option value="webpage">Webpage / Blog Post</option>
-        <option value="pdf">PDF</option>
-      </select>
-
-      {#if material.type === 'markdown' || material.type === 'pdf'}
-        <input 
-          type="file" 
-          accept={material.type === 'markdown' ? '.md' : '.pdf'}
-          on:change={(e) => handleFileChange(e, index)}
-          class="w-full p-2 border rounded text-gray-900 dark:text-white"
-        />
-      {:else if material.type === 'webpage'}
-        <input 
-          type="url" 
-          bind:value={material.url} 
-          placeholder="https://example.com"
-          class="w-full p-2 mb-2 border rounded text-gray-900 dark:text-white bg-white dark:bg-gray-700"
-        />
-      {/if}
-
-      {#if index > 0}
-        <button 
-          on:click={() => removeMaterial(index)}
-          class="mt-2 px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600"
-        >
-          Remove
-        </button>
-      {/if}
+        Click to upload
+      </label>
+      <span class="text-gray-600 dark:text-gray-400"> or drag and drop</span>
+      <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">PDF, MD files are allowed</p>
     </div>
-  {/each}
 
-  <button 
-    on:click={addMaterial}
-    class="w-full px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-  >
-    Add Another Material
-  </button>
+    {#if uploadedFiles.length > 0}
+      <div class="mt-4">
+        <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Uploaded Files:</h4>
+        <ul class="space-y-2">
+          {#each uploadedFiles as file}
+            <li class="flex items-center justify-between bg-gray-100 dark:bg-gray-700 p-2 rounded">
+              <span class="text-sm text-gray-800 dark:text-gray-200">{file.name}</span>
+              <button
+                on:click={() => removeFile(file.name)}
+                class="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
+              >
+                Remove
+              </button>
+            </li>
+          {/each}
+        </ul>
+      </div>
+    {/if}
 
-  <button 
-    on:click={handleSubmit}
-    class="w-full px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
-  >
-    Upload Materials
-  </button>
-</div>
+    <button 
+      on:click={handleSubmit}
+      class="w-full px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
+    >
+      Add Materials
+    </button>
+  </div>
 </Modal>

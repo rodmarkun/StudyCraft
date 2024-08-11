@@ -46,7 +46,7 @@
 
   onMount(() => {
     audio = new Audio('/src/assets/notification-sound.wav');
-    audio.volume = 0.2; // Set volume to 50%
+    audio.volume = 0.2;
     intervalId = setInterval(updateDisplay, 1000);
   });
 
@@ -84,12 +84,12 @@
   }
 </script>
 
-<div class="flex items-center space-x-2">
-  <span class="text-xl font-mono">{displayTime}</span>
-  <div class="flex space-x-1">
+<div class="flex items-center">
+  <span class="text-xl font-mono font-semibold mr-2">{displayTime}</span>
+  <div class="flex">
     <button
       on:click={handleToggle}
-      class="p-1.5 rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-text-light dark:focus:ring-text-dark"
+      class="p-1.5 rounded-full bg-white dark:bg-gray-800 text-gray-800 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 dark:focus:ring-gray-400 transition-colors duration-200"
       title={$timerStore.isRunning ? "Pause" : "Start/Resume"}
     >
       {#if $timerStore.isRunning}
@@ -105,7 +105,7 @@
     </button>
     <button
       on:click={handleStop}
-      class="p-1.5 rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-text-light dark:focus:ring-text-dark"
+      class="p-1.5 mx-1 rounded-full bg-white dark:bg-gray-800 text-gray-800 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 dark:focus:ring-gray-400 transition-colors duration-200"
       title="Stop"
     >
       <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -113,13 +113,12 @@
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
       </svg>
     </button>
-    <Popover bind:open={popoverOpen}>
+    <Popover bind:open={popoverOpen} width="w-64">
       <button
         slot="trigger"
         on:click={() => popoverOpen = !popoverOpen}
-        class="p-1.5 rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-text-light dark:focus:ring-text-dark"
-        class:text-red-500={$timerStore.isPomodoroMode && !$timerStore.isRestPhase}
-        class:text-green-500={$timerStore.isPomodoroMode && $timerStore.isRestPhase}
+        class="p-1.5 rounded-full bg-white dark:bg-gray-800 text-gray-800 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 dark:focus:ring-gray-400 transition-colors duration-200"
+        class:text-gray-900={$timerStore.isPomodoroMode}
         title="Pomodoro Settings"
       >
         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -133,18 +132,22 @@
             checked={$timerStore.isPomodoroMode}
             on:change={handlePomodoroToggle}
             disabled={$timerStore.isRunning}
-            class="form-checkbox h-5 w-5 text-blue-600"
+            class="form-checkbox h-5 w-5 text-gray-600 dark:text-gray-400"
           />
           <span class="text-gray-900 dark:text-white">Pomodoro Mode</span>
         </label>
-        <label class="flex flex-col">
-          <span class="text-gray-900 dark:text-white">Pomodoro Length</span>
+        <div class="space-y-2">
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            Pomodoro Length
+          </label>
           <TimeInput value={$timerStore.pomodoroLength} onChange={handlePomodoroLengthChange} />
-        </label>
-        <label class="flex flex-col">
-          <span class="text-gray-900 dark:text-white">Rest Length</span>
+        </div>
+        <div class="space-y-2">
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            Rest Length
+          </label>
           <TimeInput value={$timerStore.restLength} onChange={handleRestLengthChange} />
-        </label>
+        </div>
       </div>
     </Popover>
   </div>
