@@ -190,6 +190,52 @@ export async function generateFlashcards(content: string, numberOfCards: number)
     return flashcards;
 }
 
+export async function generateTestFlashcards(content: string, numberOfCards: number): Promise<Array<{question: string, answer: string}>> {
+    // Remove the PDF cleaning step here, as it's now done before calling this function
+    const chunkSize = 3000;
+    const chunks = splitContent(content, chunkSize);
+    const flashcards: Array<{question: string, answer: string}> = [];
+    const usedQuestions = new Set<string>();
+
+    const currentOptions = getCurrentOptions();
+    const { customPrompts } = currentOptions;
+
+    for (const chunk of chunks) {
+        const remainingCards = numberOfCards - flashcards.length;
+        if (remainingCards <= 0) break;
+
+        const chunkPrompt = customPrompts.flashcardQuestionPrompt
+            .replace('{numberOfCards}', Math.min(remainingCards, 5).toString())
+            .replace('{content}', chunk);
+
+        console.log("Content used for this flashcard:", chunk);
+
+        const questionsResponse = await getLLMResponse(chunkPrompt);
+        const questions = questionsResponse.split('\n')
+            .map(q => cleanResponse(q))
+            .filter(q => q.trim() !== '');
+
+        for (const question of questions) {
+            if (usedQuestions.has(question.toLowerCase())) continue;
+
+            const answerPrompt = customPrompts.flashcardAnswerPrompt
+                .replace('{question}', question)
+                .replace('{content}', chunk);
+
+            const answer = cleanResponse(await getLLMResponse(answerPrompt));
+
+            if (answer !== '') {
+                flashcards.push({ question, answer });
+                usedQuestions.add(question.toLowerCase());
+            }
+
+            if (flashcards.length >= numberOfCards) break;
+        }
+    }
+
+    return flashcards;
+}
+
 function splitContent(content: string, chunkSize: number): string[] {
     const chunks: string[] = [];
     for (let i = 0; i < content.length; i += chunkSize) {

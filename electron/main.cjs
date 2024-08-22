@@ -33,6 +33,8 @@ const createWindow = () => {
         }
     })
 
+    mainWindow.setMenu(null)
+
     // define how electron will load the app
     if (isDevEnvironment) {
 

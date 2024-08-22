@@ -24,30 +24,28 @@
   function positionPopover() {
     if (open && triggerEl && popoverEl) {
       const rect = triggerEl.getBoundingClientRect();
-      const scrollY = window.scrollY || window.pageYOffset;
-      const scrollX = window.scrollX || window.pageXOffset;
       popoverEl.style.position = 'fixed';
-      popoverEl.style.top = `${rect.bottom + scrollY}px`;
-      popoverEl.style.left = `${rect.left + scrollX}px`;
+      popoverEl.style.top = `${rect.bottom}px`;
+      popoverEl.style.left = `${rect.left}px`;
       // Adjust if popover is off-screen
       const popoverRect = popoverEl.getBoundingClientRect();
       if (popoverRect.right > window.innerWidth) {
         popoverEl.style.left = `${window.innerWidth - popoverRect.width}px`;
       }
       if (popoverRect.bottom > window.innerHeight) {
-        popoverEl.style.top = `${rect.top + scrollY - popoverRect.height}px`;
+        popoverEl.style.top = `${rect.top - popoverRect.height}px`;
       }
     }
   }
 
   onMount(() => {
     document.addEventListener('click', handleClickOutside, true);
-    window.addEventListener('scroll', positionPopover);
+    window.addEventListener('resize', positionPopover);
   });
 
   onDestroy(() => {
     document.removeEventListener('click', handleClickOutside, true);
-    window.removeEventListener('scroll', positionPopover);
+    window.removeEventListener('resize', positionPopover);
   });
 
   $: if (open) {
@@ -63,7 +61,7 @@
   {#if open}
     <div
       bind:this={popoverEl}
-      class={`fixed z-50 ${width} rounded-md shadow-lg bg-white dark:bg-gray-800 ring-1 ring-black ring-opacity-5 popover-content ${customClass}`}
+      class={`fixed z-[60] ${width} rounded-md shadow-lg bg-white dark:bg-gray-800 ring-1 ring-black ring-opacity-5 popover-content ${customClass}`}
       style="max-height: 80vh; overflow-y: auto;"
     >
       <div class="p-4">
