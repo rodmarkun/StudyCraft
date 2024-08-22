@@ -15,7 +15,6 @@
   </script>
   
   <div class="options-section">
-    <h2 class="section-title">Custom Prompts</h2>
     <div class="space-y-8">
       <div>
         <h3 class="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-2">Flashcard Question Prompt</h3>

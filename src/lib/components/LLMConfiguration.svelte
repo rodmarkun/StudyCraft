@@ -35,7 +35,6 @@
 </script>
 
 <div class="options-section">
-  <h2 class="section-title">LLM Configuration</h2>
   <div class="space-y-4">
     <div class="flex space-x-4">
       <button

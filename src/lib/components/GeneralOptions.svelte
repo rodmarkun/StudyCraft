@@ -7,7 +7,6 @@
   </script>
   
   <div class="options-section">
-    <h2 class="section-title">General Options</h2>
     <div class="space-y-4">
       <label class="flex items-center space-x-3 text-gray-700 dark:text-gray-300">
         <input
