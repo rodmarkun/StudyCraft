@@ -30,7 +30,8 @@ const createWindow = () => {
             preload: path.join(__dirname, 'preload.js'),
             contextIsolation: true,
             nodeIntegration: false
-        }
+        },
+        icon: path.join(__dirname, '..', 'src', 'assets', 'StudyCraftLogo.ico')
     })
 
     mainWindow.setMenu(null)
