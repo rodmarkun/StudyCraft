@@ -33,6 +33,8 @@ export interface CustomPrompts {
   flashcardQuestionPrompt: string;
   flashcardAnswerPrompt: string;
   explanationPrompt: string;
+  testFlashcardIncorrectAnswerPrompt: string;
+  testFlashcardAnswerPrompt: string;
 }
 
 export interface Options {
@@ -71,6 +73,31 @@ Content:
 
 Answer:`,
   explanationPrompt: `Please explain the following answer to the question "{question}": {answer}. Provide a rich but brief explanation that is easy to understand. Answer with only the explanation and nothing else. Explanation:`,
+  testFlashcardIncorrectAnswerPrompt: `Generate three incorrect answers for the following question. The correct answer is provided.
+Ensure that all options are wrong and clearly incorrect to someone who knows the material well. Make them diverse and challenging.
+
+Each answer should be concise (10 words max) and distinctly different from the others and from the correct answer.
+Provide ONLY the incorrect answers, without any explanations or reasoning.
+
+Question: {question}
+Correct Answer: {correctAnswer}
+
+Incorrect Answers:`,
+
+testFlashcardAnswerPrompt: `Provide an extremely concise answer to the following question based on the given content. Follow these strict guidelines:
+
+- Answer must be clear, informative, and directly address the question.
+- Answer MUST NOT exceed 10 words. Aim for 5-7 words if possible.
+- If the question asks to fill in a blank, provide only the missing term or phrase.
+- Output only the answer, without any additional text, explanation, or numbering.
+- Do not use complete sentences if a phrase suffices.
+
+Question: "{question}"
+
+Content:
+{content}
+
+Answer (remember, 10 words maximum):`,
 };
 
 

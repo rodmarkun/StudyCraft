@@ -190,11 +190,10 @@ export async function generateFlashcards(content: string, numberOfCards: number)
     return flashcards;
 }
 
-export async function generateTestFlashcards(content: string, numberOfCards: number): Promise<Array<{question: string, answer: string}>> {
-    // Remove the PDF cleaning step here, as it's now done before calling this function
-    const chunkSize = 3000;
+export async function generateTestFlashcards(content: string, numberOfCards: number): Promise<Array<{question: string, answer: {options: string[], correctIndex: number}}>> {
+    const chunkSize = 2500;
     const chunks = splitContent(content, chunkSize);
-    const flashcards: Array<{question: string, answer: string}> = [];
+    const flashcards: Array<{question: string, answer: {options: string[], correctIndex: number}}> = [];
     const usedQuestions = new Set<string>();
 
     const currentOptions = getCurrentOptions();
@@ -208,8 +207,6 @@ export async function generateTestFlashcards(content: string, numberOfCards: num
             .replace('{numberOfCards}', Math.min(remainingCards, 5).toString())
             .replace('{content}', chunk);
 
-        console.log("Content used for this flashcard:", chunk);
-
         const questionsResponse = await getLLMResponse(chunkPrompt);
         const questions = questionsResponse.split('\n')
             .map(q => cleanResponse(q))
@@ -218,14 +215,40 @@ export async function generateTestFlashcards(content: string, numberOfCards: num
         for (const question of questions) {
             if (usedQuestions.has(question.toLowerCase())) continue;
 
-            const answerPrompt = customPrompts.flashcardAnswerPrompt
+            const answerPrompt = customPrompts.testFlashcardAnswerPrompt
                 .replace('{question}', question)
                 .replace('{content}', chunk);
 
-            const answer = cleanResponse(await getLLMResponse(answerPrompt));
+            const answerResponse = await getLLMResponse(answerPrompt);
+            const correctAnswer = cleanResponse(answerResponse).replace(/"/g, '');
 
-            if (answer !== '') {
-                flashcards.push({ question, answer });
+            const answerIncorrectPrompt = customPrompts.testFlashcardIncorrectAnswerPrompt
+                .replace('{question}', question)
+                .replace('{correctAnswer}', correctAnswer);
+
+            const answerIncorrectResponse = await getLLMResponse(answerIncorrectPrompt);
+
+            const incorrectAnswers = answerIncorrectResponse.split('\n')
+                .map(a => a.trim())
+                .filter(a => a.match(/^\d+\.\s*/))  // Only keep lines starting with a number and a dot
+                .map(a => a.replace(/^\d+\.\s*/, '').replace(/"/g, ''))  // Remove the number and dot
+                .filter(a => a !== '' && a !== correctAnswer);
+
+            console.log("Correct answer: ", correctAnswer)
+            console.log("Incorrect answer: ", incorrectAnswers)
+
+            if (correctAnswer && incorrectAnswers.length >= 3) {
+                const options = [...incorrectAnswers.slice(0, 3)];
+                const correctIndex = Math.floor(Math.random() * (options.length + 1));
+                options.splice(correctIndex, 0, correctAnswer);
+
+                flashcards.push({
+                    question,
+                    answer: {
+                        options,
+                        correctIndex
+                    }
+                });
                 usedQuestions.add(question.toLowerCase());
             }
 
