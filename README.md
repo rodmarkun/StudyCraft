@@ -4,28 +4,39 @@ StudyCraft is an open-source application developed to empower your learning jour
 
 Manage your study and review materials as you wish, grouping them into collections!
 <p align="center">
-  <img src="https://github.com/user-attachments/assets/8072736c-aeaa-4dba-a1c9-682f75c555f3" width="700"/>
-
+  <img src="https://github.com/user-attachments/assets/8884f511-5ecc-4cf5-9a0f-285a1a2d68b6" width="1000"/>
 </p>
 
-Study and review using flashcards. You can ask LLMs for explanations!
+Study using flashcards. You can ask LLMs for explanations!
 <p align="center">
-  <img src="https://github.com/user-attachments/assets/eca2b4ed-d162-4efd-bbdd-cc56ef8656e6" width="700"/>
+  <img src="https://github.com/user-attachments/assets/205a49a2-8164-48dc-a99e-57d6336a088a" width="800"/>
+  <br>
+  <img src="https://github.com/user-attachments/assets/84847c32-c805-49cc-ad00-bb2d7b42849b" width="800"/>
 </p>
 
-Generate review material automatically from your study material!
+
+After studying, review your knowledge in test mode!
 <p align="center">
-  <img src="https://github.com/user-attachments/assets/e0f7911e-7614-48a5-8344-f69b55bbdaca" width="700"/>
+  <img src="https://github.com/user-attachments/assets/9606d51a-606b-4024-a07e-6f0725134f0a" width="800"/>
+  <br>
+  <img src="https://github.com/user-attachments/assets/a4ee285b-9fcf-4670-82fa-973f59d1cfea" width="800"/>
+  <img src="https://github.com/user-attachments/assets/01812964-fc76-429f-bfd4-e82e4ebe6898" width="800"/>
 </p>
 
-Track your study sessions!
+Generate review material automatically from your study material! You can create either standard flashcards or test-type flashcards!
 <p align="center">
-  <img src="https://github.com/user-attachments/assets/1041b14c-8b48-4df3-b552-765f680d255a" width="700"/>
+  <img src="https://github.com/user-attachments/assets/cb44227e-2b32-44bc-b027-92d1fccdbeb5" width="800"/>
+</p>
+
+Track your study sessions, a Pomodoro timer is available as well!
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/da5789e9-58b9-4e37-8783-1d10650af153" width="800"/>
+  <img src="https://github.com/user-attachments/assets/93b52326-15b0-44c2-8a01-f669cf96bcb2" width="600"/>
 </p>
 
 We also got a dark theme!
 <p align="center">
-  <img src="https://github.com/user-attachments/assets/65b7d10f-a21b-4049-9ed4-4eba7ce180a6" width="700"/>
+  <img src="https://github.com/user-attachments/assets/58483cd5-6cd4-4c42-8e11-a46903b6234a" width="1000"/>
 </p>
 
-You can configure your preferred LLM, whether it’s a self-hosted model, Runpod, or OpenAI's API. You choose how to configure your study. StudyCraft is fully open-source, built with ❤️ with Svelte and Electron.
+You can configure your preferred LLM, whether it’s a self-hosted model, Runpod, or OpenAI's API. You choose how to configure your study. StudyCraft is fully open-source, built with ❤️ with Svelte and Electron. In case you want to buy me a coffee, you can do it [here](https://ko-fi.com/rodmarkun).
