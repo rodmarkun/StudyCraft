@@ -1,0 +1,71 @@
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600&family=Inter:wght@300;400;500&display=swap');
+
+:root {
+  /* Dark theme */
+  --dark-background: #0a0a0b;
+  --dark-surface: #161618;
+  --dark-board: #1c1c1f;
+  --dark-text: #ffffff;
+  --dark-text-secondary: #a0a0a0;
+  --dark-border: rgba(255, 255, 255, 0.1);
+
+  /* Light theme */
+  --light-background: #f8f6f6;  
+  --light-surface: #fafafa;    
+  --light-board: #f8f8f8;      
+  --light-text: #222222;       
+  --light-text-secondary: #666666;
+  --light-border: rgba(0, 0, 0, 0.1);
+
+  /* Shared colors */
+  --accent: #6e56cf;
+  --error: #ff6b6b;
+  --success: #51cf66;
+  
+  /* Spacing */
+  --space-xs: 0.25rem;
+  --space-sm: 0.5rem;
+  --space-md: 1rem;
+  --space-lg: 2rem;
+  --space-xl: 4rem;
+
+  /* Other */
+  --border-radius: 8px;
+  --transition-speed: 0.2s;
+
+  /* Fonts */
+  --font-heading: 'Playfair Display', serif;
+  --font-body: 'Inter', sans-serif;
+}
+
+[data-theme="dark"] {
+  --background: var(--dark-background);
+  --surface: var(--dark-surface);
+  --board: var(--dark-board);
+  --text: var(--dark-text);
+  --text-secondary: var(--dark-text-secondary);
+  --border: var(--dark-border);
+}
+
+[data-theme="light"] {
+  --background: var(--light-background);
+  --surface: var(--light-surface);
+  --board: var(--light-board);
+  --text: var(--light-text);
+  --text-secondary: var(--light-text-secondary);
+  --border: var(--light-border);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--text);
+  font-family: 'IBM Plex Mono', monospace;
+  line-height: 1.5;
+}

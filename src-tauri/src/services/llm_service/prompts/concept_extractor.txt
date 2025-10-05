@@ -1,0 +1,34 @@
+Extract the key concepts from the following content that are most relevant to the focus topic.
+
+REQUIREMENTS:
+- Identify 3-5 key concepts maximum
+- Prioritize concepts directly related to "{focus_concept}"
+- Each concept should be a distinct, important idea about the focus topic
+- Concepts should be extractable as flashcard topics or test questions
+- Focus on understanding rather than memorization
+- Provide a very brief explanation of why each concept is important for learning about "{focus_concept}"
+- Respond strictly in {language} language
+- Exclude organizational content (chapter introductions, learning objectives, summaries)
+- Focus on substantive technical/academic concepts rather than course structure
+- Avoid concepts that are about the learning process itself
+- Keep response as a valid, single-line, compact JSON object without any unescaped newline characters in its string values
+
+FOCUS TOPIC: "{focus_concept}"
+
+CONTENT:
+"""
+{content}
+"""
+
+Respond with a JSON object in this format:
+{
+  "concepts": [
+    {
+      "concept": "concept name or brief description",
+      "context": "relevant context from the source material",
+      "chunk_id": {chunk_id}
+    }
+  ]
+}
+
+Provide only the JSON object without any additional text.

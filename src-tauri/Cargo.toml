@@ -1,0 +1,59 @@
+[package]
+name = "StudyCraft"
+version = "1.0.0"
+description = "Study evolved."
+authors = ["Rodmarkun"]
+license = ""
+repository = ""
+edition = "2021"
+rust-version = "1.77.2"
+build = "build.rs"
+
+[lib]
+name = "app_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2.0.2", features = [] }
+
+[dependencies]
+serde_json = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+env_logger = "0.10"
+log = "0.4"
+tauri = { version = "2.1.0", features = [] }
+tauri-plugin-log = "2.0.0-rc"
+tauri-plugin-fs = "2"
+uuid = { version = "1.11.0", features = ["v4", "serde"] }
+dirs = "4.0.0" 
+once_cell = "1.16.0" 
+reqwest = { version = "0.11", features = ["json", "stream"] }
+async-trait = "0.1.77"
+futures = "0.3.30"
+futures-util = "0.3"
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "sync"] } 
+rusqlite = { version = "0.37.0", features = ["bundled"] }
+r2d2 = "0.8.10"
+r2d2_sqlite = "0.31.0"
+chrono = { version = "0.4.31", features = ["serde"] }
+flyllm = "0.3.1"
+fastembed = "=4.9.1"
+ort = { version = "2.0.0-rc.9", features = ["download-binaries"] }
+zip = "4.2.0"
+rand = "0.9.1"
+keyring = "2.0"
+sqlite-vec = "0.1.6"
+tauri-plugin-dialog = "2"
+const_format = "0.2.34"
+html2md = "0.2.15"
+url = "2.5.7"
+git2 = "0.20.2"
+ignore = "0.4.23"
+mime_guess = "2.0.5"
+mime = "0.3.17"
+scraper = "0.24.0"
+pulldown-cmark = "0.13.0"
+regex = "1.11.2"
+tauri-plugin-shell = "2"
+chromiumoxide = { version = "0.7", features = ["tokio-runtime", "_fetcher-rusttls-tokio"], default-features = false }
+base64 = "0.22.1"

@@ -1,0 +1,78 @@
+Generate exactly {count} multiple-choice test questions based on the provided concepts and their contexts.
+REQUIREMENTS:
+- Create exactly {count} test questions (one per concept when possible)
+- Question: Clear, specific question that tests understanding of the concept's SUBSTANCE
+- Provide 4 answer options with exactly 1 correct answer
+- Focus on testing comprehension and application rather than memorization
+- Ensure questions are unambiguous with clearly distinguishable answer choices
+- Do not make the correct question too obvious
+- Don't make the correct answer more comprehensive or detailed than the distractors
+- Use the provided context to create relevant, realistic distractors
+- All distractors should be WRONG based on the provided concepts and contexts
+- Generate both questions and answers strictly in {language} language
+- Make incorrect answers plausible but clearly wrong to someone who understands the concept
+- DO NOT include position numbers - they will be assigned automatically
+- Keep response as a valid, single-line, compact JSON object without any unescaped newline characters in its string values
+
+AVOID:
+- Meta-questions about chapters, sections, or learning objectives
+- Questions asking "what will you learn" or "what does this chapter cover"
+- Questions about the structure or organization of the material
+- Questions referencing specific chapter/section numbers
+- Questions about what topics are discussed in certain parts of the material
+
+FOCUS ON:
+- The actual concepts, principles, and knowledge being taught
+- How things work, why they matter, and their practical applications
+- Definitions, relationships, and real-world applications of concepts
+- Testing understanding of the subject matter itself
+
+CONCEPTS:
+{concepts}
+
+EXAMPLES:
+GOOD Example:
+Concept: "photosynthesis process in plants"
+Context: "plants convert sunlight, water, and carbon dioxide into glucose and oxygen"
+{
+  "question": "What are the primary inputs required for photosynthesis in plants?",
+  "answers": [
+    {
+      "answer_text": "Sunlight, water, and carbon dioxide",
+      "is_correct": true
+    },
+    {
+      "answer_text": "Sunlight, oxygen, and nitrogen",
+      "is_correct": false
+    },
+    {
+      "answer_text": "Water, soil nutrients, and oxygen",
+      "is_correct": false
+    },
+    {
+      "answer_text": "Carbon dioxide, soil minerals, and heat",
+      "is_correct": false
+    }
+  ]
+}
+
+AVOID Examples:
+"What will you learn about photosynthesis in Chapter 4?"
+"Which chapter covers plant energy processes?"
+"What are the learning objectives for the photosynthesis section?"
+
+Respond with exactly {count} test questions in this JSON format:
+{
+  "test_questions": [
+    {
+      "question": "your question here",
+      "answers": [
+        {
+          "answer_text": "answer option text",
+          "is_correct": true/false
+        }
+      ]
+    }
+  ]
+}
+Provide only the JSON object without additional text.

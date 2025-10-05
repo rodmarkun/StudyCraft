@@ -1,0 +1,178 @@
+  .app {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      background: var(--background);
+      color: var(--text);
+      overflow-x: hidden;
+      width: 100%;
+  }
+
+  .content-header {
+      position: relative;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 1.5rem 0;
+      margin-bottom: 2rem;
+      min-height: 60px;
+  }
+
+  h2 {
+      font-size: 3.2rem;
+      font-weight: 400;
+      letter-spacing: 0.02em;
+      color: var(--text);
+      font-family: var(--font-heading);
+      margin: 0;
+      text-align: center;
+  }
+
+.view-controls {
+      position: absolute;
+      top: 50%;
+      right: var(--space-lg);
+      transform: translateY(-50%);
+      display: flex;
+      gap: var(--space-xs);
+      background: var(--surface);
+      padding: 2px;
+      border-radius: var(--border-radius);
+      border: 1px solid var(--border);
+      align-items: center;
+      z-index: 10;
+  }
+
+  .view-button {
+      background: none;
+      border: none;
+      padding: var(--space-xs);
+      color: var(--text-secondary);
+      cursor: pointer;
+      border-radius: calc(var(--border-radius) - 2px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all var(--transition-speed) ease;
+  }
+
+  .view-button:hover {
+      color: var(--text);
+      background: color-mix(in srgb, var(--accent) 10%, transparent);
+  }
+
+  .view-button.active {
+      background: var(--accent);
+      color: var(--text);
+  }
+
+  .keyboard-shortcuts-button {
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      cursor: pointer;
+      padding: var(--space-xs);
+      border-radius: calc(var(--border-radius) - 2px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all var(--transition-speed) ease;
+      border-left: 1px solid var(--border);
+      margin-left: var(--space-xs);
+      padding-left: var(--space-sm);
+  }
+
+  .keyboard-shortcuts-button:hover {
+      color: var(--text);
+      background: color-mix(in srgb, var(--accent) 10%, transparent);
+  }
+
+  .sort-controls select {
+      padding: 0.6rem 0.5rem;
+      border-radius: var(--border-radius);
+      border: 1px transparent var(--border);
+      background-color: var(--surface);
+      color: var(--text-secondary, #64748b);
+      font-size: 0.9rem;
+      font-family: var(--font-body);
+      cursor: pointer;
+  }
+
+  .sort-controls select:hover {
+      color: var(--text);
+  }
+
+  .search-controls {
+      display: flex;
+      align-items: center;
+      gap: var(--space-xs);
+      margin-left: var(--space-xs);
+      padding-left: var(--space-xs);
+      border-left: 1px solid var(--border);
+      overflow: hidden;
+  }
+
+  .search-input {
+      position: relative;
+      display: flex;
+      align-items: center;
+  }
+
+  .search-input input {
+      padding: 0.3rem 0.5rem;
+      border-radius: var(--border-radius);
+      border: 1px solid var(--border);
+      background-color: var(--surface);
+      color: var(--text);
+      font-size: 0.9rem;
+      font-family: var(--font-body);
+      width: 180px;
+  }
+  
+
+  .clear-search {
+      position: absolute;
+      right: 5px;
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      cursor: pointer;
+      font-size: 1.2rem;
+      line-height: 1;
+  }
+
+  @media (max-width: 1024px) {
+      .view-controls {
+          right: var(--space-md);
+      }
+  }
+
+  @media (max-width: 768px) {
+      h2 {
+          font-size: 2rem;
+      }
+
+      .content-header {
+          flex-direction: column;
+          gap: var(--space-sm);
+          padding: 1rem 0;
+      }
+
+      .view-controls {
+          position: static;
+          transform: none;
+          flex-wrap: wrap;
+          justify-content: center;
+      }
+
+  }
+
+  @media (max-width: 480px) {
+      h2 {
+          font-size: 1.8rem;
+      }
+
+      .content-header {
+          padding: 0.75rem 0;
+      }
+  }

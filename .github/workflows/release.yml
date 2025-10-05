@@ -1,0 +1,219 @@
+name: 'Release Tauri App'
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  publish-tauri:
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: 'macos-latest' # for ARM Macs (M1 and above)
+            args: '--target aarch64-apple-darwin'
+            rust-target: 'aarch64-apple-darwin'
+            python-target: 'aarch64-apple-darwin'
+          - platform: 'ubuntu-24.04' # for Linux
+            args: ''
+            rust-target: ''
+            python-target: 'x86_64-unknown-linux-gnu'
+          - platform: 'windows-latest' # for Windows
+            args: ''
+            rust-target: ''
+            python-target: 'x86_64-pc-windows-msvc'
+
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 'lts/*'
+          cache: 'npm' 
+
+      # Python for building the sidecar (PDF->MD conversion and cover extraction)
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyinstaller pymupdf4llm pillow
+          # Add any other dependencies your Python script needs
+
+      - name: Build Python executables
+        run: |
+          cd src-tauri          
+          mkdir -p dist
+
+          # Build conversor from spec file
+          if [ -f "conversor.spec" ]; then
+            echo "Building conversor from spec file..."
+            pyinstaller conversor.spec --distpath pyinstaller_dist
+            
+            echo "Contents of pyinstaller_dist after conversor build:"
+            ls -la pyinstaller_dist/ || echo "pyinstaller_dist not found"
+            
+            if [[ "${{ matrix.platform }}" == "windows-latest" ]]; then
+              CONVERSOR_EXE=$(find pyinstaller_dist/ -name "*conversor*.exe" | head -1)
+              if [ -n "$CONVERSOR_EXE" ]; then
+                mv "$CONVERSOR_EXE" dist/conversor-${{ matrix.python-target }}.exe
+                echo "Created: dist/conversor-${{ matrix.python-target }}.exe"
+              else
+                echo "Error: No conversor executable found!"
+                ls -la pyinstaller_dist/
+                exit 1
+              fi
+            else
+              # no extension on linux/macos
+              CONVERSOR_BIN=$(find pyinstaller_dist/ -name "*conversor*" -type f | head -1)
+              if [ -n "$CONVERSOR_BIN" ]; then
+                mv "$CONVERSOR_BIN" dist/conversor-${{ matrix.python-target }}
+                chmod +x dist/conversor-${{ matrix.python-target }}
+                echo "Created: dist/conversor-${{ matrix.python-target }}"
+              else
+                echo "Error: No conversor executable found!"
+                ls -la pyinstaller_dist/
+                exit 1
+              fi
+            fi
+          else
+            echo "Error: conversor.spec not found!"
+            exit 1
+          fi
+          
+          # Build cover-extractor from spec file
+          if [ -f "cover-extractor.spec" ]; then
+            echo "Building cover-extractor from spec file..."
+            pyinstaller cover-extractor.spec --distpath pyinstaller_dist
+            
+            echo "Contents of pyinstaller_dist after cover-extractor build:"
+            ls -la pyinstaller_dist/
+            
+            if [[ "${{ matrix.platform }}" == "windows-latest" ]]; then
+              if [ -f "pyinstaller_dist/cover-extractor.exe" ]; then
+                mv pyinstaller_dist/cover-extractor.exe dist/cover-extractor-${{ matrix.python-target }}.exe
+                echo "Created: dist/cover-extractor-${{ matrix.python-target }}.exe"
+              else
+                echo "Error: cover-extractor.exe not found!"
+                ls -la pyinstaller_dist/
+                exit 1
+              fi
+            else
+              if [ -f "pyinstaller_dist/cover-extractor" ]; then
+                mv pyinstaller_dist/cover-extractor dist/cover-extractor-${{ matrix.python-target }}
+                chmod +x dist/cover-extractor-${{ matrix.python-target }}
+                echo "Created: dist/cover-extractor-${{ matrix.python-target }}"
+              else
+                echo "Error: cover-extractor not found!"
+                ls -la pyinstaller_dist/
+                exit 1
+              fi
+            fi
+          else
+            echo "Error: cover-extractor.spec not found!"
+            exit 1
+          fi
+          
+          echo "Final dist directory contents:"
+          ls -la dist/
+          
+        shell: bash
+
+      - name: Verify Python executable
+        run: |
+          ls -la src-tauri/dist/
+          if [[ "${{ matrix.platform }}" == "windows-latest" ]]; then
+            file src-tauri/dist/conversor-${{ matrix.python-target }}.exe
+          else
+            file src-tauri/dist/conversor-${{ matrix.python-target }}
+            chmod +x src-tauri/dist/conversor-${{ matrix.python-target }}
+          fi
+        shell: bash
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin' || '' }}
+        timeout-minutes: 10
+        continue-on-error: false
+
+      - name: Retry Rust installation on failure
+        if: failure() && matrix.platform == 'ubuntu-22.04'
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ''
+        timeout-minutes: 15
+
+      - name: Install Linux dependencies
+        if: matrix.platform == 'ubuntu-24.04' 
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-0=2.44.0-2 \
+            libwebkit2gtk-4.1-dev=2.44.0-2 \
+            libjavascriptcoregtk-4.1-0=2.44.0-2 \
+            libjavascriptcoregtk-4.1-dev=2.44.0-2 \
+            gir1.2-javascriptcoregtk-4.1=2.44.0-2 \
+            gir1.2-webkit2-4.1=2.44.0-2 \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            libssl-dev \
+            pkg-config
+
+      - name: Install OpenSSL for macOS
+        if: matrix.platform == 'macos-latest'
+        run: |
+          # Install OpenSSL
+          brew install openssl@3
+          
+          # Set environment variables
+          echo "OPENSSL_DIR=$(brew --prefix openssl@3)" >> $GITHUB_ENV
+          echo "PKG_CONFIG_PATH=$(brew --prefix openssl@3)/lib/pkgconfig" >> $GITHUB_ENV
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Build and release Tauri app
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: 'v__VERSION__' 
+          releaseName: 'StudyCraft v__VERSION__' # __VERSION__ gets replaced automatically
+          releaseBody: |
+            ## Installation Instructions
+            
+            ### Windows:
+            
+            Download and run either the `.msi` or the `.exe` installer.
+
+            > **IMPORTANT**: StudyCraft does not have EV application signing *yet*. This means a Windows SmartScreen warning will pop up when trying to execute the installer.
+
+            ### MacOS (ARM) 
+            
+            Download the `.dmg` file and drag to Applications.
+
+            > **IMPORTANT**: StudyCraft is not yet associated with an Apple Developer license, which will trigger a message saying that the application is 'damaged'. To solve this, you can run the following command:
+
+            ```
+            sudo xattr -rd com.apple.quarantine /path/to/StudyCraft.app
+            ```
+
+            > Or right-click the app, select 'Open', then click 'Open' in the security dialog.
+
+            ### Linux
+
+            Download the `.AppImage` and make it executable, or use the `.deb` package
+          releaseDraft: false 
+          prerelease: false 
+          args: ${{ matrix.args }}
+          retryAttempts: 2

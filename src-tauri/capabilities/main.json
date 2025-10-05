@@ -1,0 +1,26 @@
+{
+    "$schema": "../gen/schemas/desktop-schema.json",
+    "identifier": "main-capability",
+    "description": "Capability for the main window",
+    "windows": ["main"],
+    "permissions": [
+      "fs:default",
+      {
+        "identifier": "fs:scope",
+        "allow": [
+          { "path": "$APPDATA" },
+          { "path": "$APPDATA/**" },
+          { "path": "$LOCALAPPDATA/**" },
+          { "path": "$APPLOCALDATA/**" },
+          { "path": "$HOME/Desktop/Proyectos/StudyCraft Library" },
+          { "path": "$HOME/Desktop/Proyectos/StudyCraft Library/**" }
+        ]
+      },
+      {
+        "identifier": "fs:allow-read",
+        "allow": [
+          { "path": "$HOME/Desktop/Proyectos/StudyCraft Library/**" }
+        ]
+      }
+    ]
+  }

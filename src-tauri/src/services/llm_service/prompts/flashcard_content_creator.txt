@@ -1,0 +1,58 @@
+Generate exactly {count} focused question-answer pairs based on the provided concepts and their contexts.
+
+REQUIREMENTS:
+- Create exactly {count} flashcards (one per concept)
+- Question: One clear sentence that targets the key concept's SUBSTANCE
+- Answer: Concise (1 sentence) but comprehensive response
+- Focus on testing understanding of the actual subject matter
+- Ensure each question has a specific, unambiguous answer
+- Use the provided context to create relevant examples if helpful
+- Both question and answer must be brief and to the point
+- Generate both questions and answers strictly in {language} language
+- Keep response as a valid, single-line, compact JSON object without any unescaped newline characters in its string values
+
+AVOID:
+- Meta-questions about chapters, sections, or learning objectives
+- Questions asking "what will you learn" or "what does this chapter cover"
+- Questions about the structure or organization of the material
+- Questions referencing specific chapter/section numbers
+
+FOCUS ON:
+- The actual concepts, principles, and knowledge being taught
+- How things work, why they matter, and their practical applications
+- Definitions, relationships, and real-world applications of concepts
+
+CONCEPTS:
+{concepts}
+
+EXAMPLES:
+
+Example format:
+Concept: "transformer architecture and self-attention"
+Context: "relies on self-attention mechanisms instead of recurrent networks for parallel processing"
+{
+  "question": "How does the transformer architecture improve processing of sequential data compared to recurrent networks?",
+  "answer": "The transformer uses self-attention mechanisms that enable parallel processing and better capture long-range dependencies, unlike sequential processing in recurrent networks."
+}
+
+GOOD EXAMPLE:
+Concept: "transformer architecture and self-attention"
+Question: "How does self-attention in transformers process sequential data differently than RNNs?"
+
+AVOID EXAMPLES:
+"What will you learn about transformers in this chapter?"
+"What does Chapter 3 cover about neural networks?"
+"What are the learning objectives for the transformer section?"
+
+ANSWER STRUCTURE:
+Respond with exactly {count} question-answer pairs in this JSON format:
+{
+  "flashcards": [
+    {
+      "question": "your question here",
+      "answer": "your answer here"
+    }
+  ]
+}
+
+Provide only the JSON object without additional text.
