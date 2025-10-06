@@ -2,6 +2,9 @@
 
 <div align="center">
 
+<img width="170" height="170" alt="icon" src="https://github.com/user-attachments/assets/ac0b58ef-2855-44cc-a6f2-7dde8b7985b5" />
+
+
 StudyCraft is a multi-platform desktop application that lets you create study materials from a wide range of sources, edit them as you wish, generate flashcard decks and tests either manually or automatically via LLMs, track your study sessions and customize everything. Built with [Rust](https://rust-lang.org/) and [Svelte](https://svelte.dev/) via the [Tauri](https://v2.tauri.app) framework.
 
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
@@ -9,6 +12,18 @@ StudyCraft is a multi-platform desktop application that lets you create study ma
 [![Svelte](https://img.shields.io/badge/Svelte-5-orange.svg)](https://svelte.dev/)
 
 </div>
+
+## Table of Contents
+- [Features](#features)
+- [Screenshots](#screenshots)
+- [Installation](#installation)
+  - [Using an installer](#using-an-installer)
+  - [Building from source](#building-from-source)
+- [Transfering/Deleting your Data](#transferingdeleting-your-data)
+- [Project Structure](#project-structure)
+- [License](#license)
+- [Contributing](#contributing)
+- [Supporting StudyCraft](#supporting-studycraft)
 
 ## Features
 
@@ -36,6 +51,10 @@ StudyCraft is a multi-platform desktop application that lets you create study ma
 ### Screenshots
 
 <div align="center">
+<img width="686" height="479" alt="img1" src="https://github.com/user-attachments/assets/49cb0a73-2d64-49ab-a0a6-90a67c28862e" />
+<img width="696" height="452" alt="img2" src="https://github.com/user-attachments/assets/901a7a4d-ffff-4cee-a454-4c74afb1a1e9" />
+<img width="697" height="482" alt="img3" src="https://github.com/user-attachments/assets/c1cfaf41-f38c-4e69-90f4-130618f465ad" />
+<img width="694" height="488" alt="img4" src="https://github.com/user-attachments/assets/f291489d-0180-4428-8f81-bad421cee855" />
 
 </div>
 
