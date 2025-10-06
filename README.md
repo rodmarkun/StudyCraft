@@ -62,7 +62,7 @@ StudyCraft is a multi-platform desktop application that lets you create study ma
 
 ### Using an installer
 
-Click here to download the latest release. StudyCraft is available on Windows, MacOS and Linux. 
+You can download an installer in the [Releases](https://github.com/rodmarkun/StudyCraft/releases) page. StudyCraft is available on Windows, MacOS and Linux. 
 
 ### Building from source
 
