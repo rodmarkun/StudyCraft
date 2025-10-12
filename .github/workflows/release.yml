@@ -2,6 +2,9 @@ name: 'Release Tauri App'
 
 on:
   push:
+    paths-ignore:
+    - 'LICENSE*'
+    - '.github/workflows/**'
     branches:
       - master
 
