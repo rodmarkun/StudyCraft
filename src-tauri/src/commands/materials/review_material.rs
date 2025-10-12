@@ -1,6 +1,7 @@
 use crate::commands::structure::requests;
 use crate::commands::structure::responses;
 use crate::constants;
+use crate::materials::flashcard::export_to_anki;
 use crate::materials::flashcard::{Flashcard, FlashcardCounts, NewFlashcard};
 use crate::materials::review_material;
 use crate::materials::test::{NewTestQuestion, TestQuestionWithAnswers};
@@ -413,3 +414,17 @@ pub async fn get_material_tags(
         .map_err(|e| format!("Failed to get material tags: {}", e))
         .map(|tags| tags.into_iter().collect())
 }
+
+#[tauri::command]
+pub async fn export_flashcard_deck_to_anki(
+    deck_id: String,
+    app_state: State<'_, AppState>,
+) -> Result<String, String> {
+    let db_service = app_state.db.lock().await;
+
+    let flashcards = db_service
+        .get_flashcards(&deck_id)
+        .map_err(|e| format!("Failed to get flashcards: {}", e))?;
+
+    Ok(export_to_anki(flashcards))
+    }

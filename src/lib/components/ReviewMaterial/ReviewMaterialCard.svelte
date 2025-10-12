@@ -2,6 +2,8 @@
   import { onMount } from 'svelte';
   import { spring } from 'svelte/motion';
   import { invoke } from '@tauri-apps/api/core';
+  import { save } from '@tauri-apps/plugin-dialog';
+  import { writeTextFile } from '@tauri-apps/plugin-fs';
   import "../../styles/variables.css";
 
   // Assets
@@ -32,6 +34,7 @@
   let isHovering = false;
   let cardCounts = null;
   let isLoadingCounts = false;
+  let isExporting = false;
   const size = spring(1, {
     stiffness: 0.2,
     damping: 0.7
@@ -62,7 +65,6 @@
   
   $: materialName = material.name || material.review_material_name;  
   $: isAllCaughtUp = cardCounts && cardCounts.total_count > 0 && cardCounts.pending_count === 0;
-  // Update spring when zoomLevel changes and force a sync
   $: {
     size.set(zoomLevel);
     fontSize = `${Math.max(0.75, 0.5 + (zoomLevel * 0.5))}rem`;
@@ -106,6 +108,40 @@
     }
   }
   
+  async function handleExportToAnki(event) {
+    event.stopPropagation();
+    
+    if (isExporting) return;
+    
+    try {
+      isExporting = true;
+      
+      const ankiContent = await invoke('export_flashcard_deck_to_anki', {
+        deckId: String(materialId)
+      });
+      
+      const defaultFileName = `${materialName.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.txt`;
+      
+      const filePath = await save({
+        defaultPath: defaultFileName,
+        filters: [{
+          name: 'Anki Text File',
+          extensions: ['txt']
+        }]
+      });
+      
+      if (filePath) {
+        await writeTextFile(filePath, ankiContent);
+        console.log('Anki export saved to:', filePath);
+      }
+    } catch (error) {
+      console.error('Failed to export to Anki:', error);
+      alert('Failed to export deck to Anki format. Please try again.');
+    } finally {
+      isExporting = false;
+    }
+  }
+  
   function startEditing(event) {
     event.stopPropagation();
     isEditing = true;
@@ -130,7 +166,6 @@
           
           onNameUpdated({ id: materialId, newName: editingName.trim() });
         }
-        // TODO: Add test name update
       } catch (error) {
         console.error('Failed to update material name:', error);
         editingName = materialName;
@@ -340,6 +375,31 @@
         <path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3Z"></path>
       </svg>
     </button>
+        {#if isFlashcardDeck}
+      <button 
+        class="rmc-action-button rmc-export"
+        title="Export to Anki"
+        aria-label="Export to Anki"
+        disabled={isExporting}
+        on:click={handleExportToAnki}
+      >
+        <svg 
+          xmlns="http://www.w3.org/2000/svg" 
+          width={buttonSize} 
+          height={buttonSize} 
+          viewBox="0 0 24 24" 
+          fill="none" 
+          stroke="currentColor" 
+          stroke-width="2" 
+          stroke-linecap="round" 
+          stroke-linejoin="round"
+        >
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+          <polyline points="7 10 12 15 17 10"></polyline>
+          <line x1="12" y1="15" x2="12" y2="3"></line>
+        </svg>
+      </button>
+    {/if}
   </div>
 
   <div class="rmc-cover">
@@ -363,7 +423,6 @@
       {/if}
     </div>
     
-    <!-- Play button that appears on hover -->
     <div 
       class="rmc-play-button-container" 
       class:rmc-visible={isHovering} 
@@ -526,6 +585,20 @@
 
 .rmc-action-button:hover {
  transform: scale(1.1);
+}
+
+.rmc-action-button:disabled {
+ opacity: 0.5;
+ cursor: not-allowed;
+}
+
+.rmc-action-button:disabled:hover {
+ transform: none;
+}
+
+.rmc-action-button.rmc-export:hover {
+ background: color-mix(in srgb, var(--accent) 15%, var(--surface));
+ color: var(--accent);
 }
 
 .rmc-action-button.rmc-delete:hover {

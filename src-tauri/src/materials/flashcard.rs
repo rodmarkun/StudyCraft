@@ -306,3 +306,22 @@ impl Flashcard {
         updated_card
     }
 }
+
+pub fn export_to_anki(flashcards: Vec<Flashcard>) -> String {
+    flashcards
+        .iter()
+        .map(|card| {
+            let front = escape_anki_field(&card.front);
+            let back = escape_anki_field(&card.back);
+
+            format!("{}\t{}", front, back)
+        })
+        .collect::<Vec<String>>()
+        .join("\n")
+}
+
+fn escape_anki_field(text: &str) -> String {
+    text.replace('\t', "    ")  
+        .replace('\n', "<br>")   
+        .replace('\r', "")      
+}
