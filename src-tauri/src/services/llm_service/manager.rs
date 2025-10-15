@@ -368,7 +368,10 @@ impl LlmService {
                         }
                     }
                     Err(e) => {
-                        eprintln!("Failed to parse concepts for chunk {}: {} | {:#?}", chunk_id, e, response);
+                        eprintln!(
+                            "Failed to parse concepts for chunk {}: {} | {:#?}",
+                            chunk_id, e, response
+                        );
                         all_concepts.push(ConceptExtraction {
                             concept: format!(
                                 "Error extracting concept {} from chunk {}",
@@ -616,11 +619,20 @@ impl LlmService {
         // Perform vector search
         let relevant_chunks = {
             let vector_service = state.vector.lock().await;
-            let num_chunks = std::cmp::max(study_settings.max_chunks_to_recover_from_search, constants::VECDB_MIN_CHUNKS_RECOVERED_AI_SEARCH);
-            let num_chunks = std::cmp::min(num_chunks, constants::VECDB_MAX_CHUNKS_RECOVERED_AI_SEARCH);
-            vector_service.search_global(&query, num_chunks).await.map_err(|e| {
-                AppError::VectorError(format!("Failed to search through your study materials {e}"))
-            })?
+            let num_chunks = std::cmp::max(
+                study_settings.max_chunks_to_recover_from_search,
+                constants::VECDB_MIN_CHUNKS_RECOVERED_AI_SEARCH,
+            );
+            let num_chunks =
+                std::cmp::min(num_chunks, constants::VECDB_MAX_CHUNKS_RECOVERED_AI_SEARCH);
+            vector_service
+                .search_global(&query, num_chunks)
+                .await
+                .map_err(|e| {
+                    AppError::VectorError(format!(
+                        "Failed to search through your study materials {e}"
+                    ))
+                })?
         };
         if relevant_chunks.is_empty() {
             return Err(AppError::ValidationError(
@@ -666,17 +678,16 @@ impl LlmService {
                             .map(|arr| {
                                 let mut seen_files = HashSet::new();
                                 let mut unique_sources = Vec::new();
-                                
+
                                 for source_value in arr.iter() {
                                     if let Some(source_text) = source_value.as_str() {
-                                        if let Some(chunk) = relevant_chunks
-                                            .iter()
-                                            .find(|chunk| {
-                                                source_text.contains(&chunk.metadata.file_display_name)
-                                            })
-                                        {
+                                        if let Some(chunk) = relevant_chunks.iter().find(|chunk| {
+                                            source_text.contains(&chunk.metadata.file_display_name)
+                                        }) {
                                             // Only add if we haven't seen this file before
-                                            if seen_files.insert(chunk.metadata.file_display_name.clone()) {
+                                            if seen_files
+                                                .insert(chunk.metadata.file_display_name.clone())
+                                            {
                                                 unique_sources.push(chunk.clone());
                                             }
                                         }
@@ -1251,6 +1262,12 @@ async fn build_llm_manager_from_config(
 
     let mut provider_count = 0;
 
+    let ollama_endpoint = config
+        .get_ollama_endpoint()
+        .ok()
+        .flatten()
+        .unwrap_or_else(|| constants::OLLAMA_CUSTOM_ENDPOINT.to_string());
+
     // For each enabled provider, create instances for each agent type that has a model configured
     for (provider_type, provider_config) in &config.provider_configs {
         if !provider_config.enabled {
@@ -1286,7 +1303,7 @@ async fn build_llm_manager_from_config(
             if let Some(agent_models) = agent_settings.agent_models_per_provider.get(&agent_type) {
                 if let Some(model_name) = agent_models.get(provider_type) {
                     let task_name = format!("{} Task", agent_type.as_str());
-                    
+
                     println!(
                         "Adding provider {:?} with model '{}' for task '{}'",
                         provider_type, model_name, task_name
@@ -1296,7 +1313,7 @@ async fn build_llm_manager_from_config(
                         ProviderType::Ollama => builder
                             .add_instance(*provider_type, model_name, "")
                             .supports(&task_name)
-                            .custom_endpoint(constants::OLLAMA_CUSTOM_ENDPOINT),
+                            .custom_endpoint(&ollama_endpoint),
                         _ => builder
                             .add_instance(*provider_type, model_name, &api_key)
                             .supports(&task_name),
@@ -1348,14 +1365,14 @@ fn sanitize_json_strings(json_str: &str) -> String {
     let mut chars = json_str.chars().peekable();
     let mut in_string = false;
     let mut escape_next = false;
-    
+
     while let Some(ch) = chars.next() {
         if escape_next {
             result.push(ch);
             escape_next = false;
             continue;
         }
-        
+
         match ch {
             '"' => {
                 in_string = !in_string;
@@ -1386,6 +1403,6 @@ fn sanitize_json_strings(json_str: &str) -> String {
             }
         }
     }
-    
+
     result
 }

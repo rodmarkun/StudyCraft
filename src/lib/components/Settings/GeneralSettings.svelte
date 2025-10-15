@@ -16,7 +16,7 @@
   async function loadStudySettings() {
     try {
       studySettings = await invoke('get_study_settings');
-      originalSettings = JSON.parse(JSON.stringify(studySettings)); // Deep clone
+      originalSettings = JSON.parse(JSON.stringify(studySettings));
       settingsChanged = false;
       clearError();
     } catch (error) {
@@ -56,9 +56,8 @@
     if (!studySettings) return;
     
     studySettings[settingName] = value;
-    studySettings = { ...studySettings }; // Trigger reactivity
+    studySettings = { ...studySettings };
     
-    // Check if settings have changed
     settingsChanged = JSON.stringify(studySettings) !== JSON.stringify(originalSettings);
   }
 
@@ -68,7 +67,6 @@
     const numValue = parseInt(value) || 1;
     const steps = [...studySettings.learning_steps];
     
-    // Ensure we have at least 2 steps
     while (steps.length < 2) {
       steps.push(1);
     }
@@ -87,7 +85,7 @@
 <div class="tab-content">
   {#if studySettings}
     <div class="settings-section">
-      <div class="section-header">
+      <div class="section-header sticky-header">
         <h3>General Settings</h3>
         <div class="section-actions">
           <button 
@@ -120,7 +118,6 @@
       </div>
 
       <div class="settings-grid">
-        <!-- Flashcard Learning Settings -->
         <div class="setting-group">
           <h4>Flashcard Learning</h4>
           
@@ -229,7 +226,6 @@
           </div>
         </div>
 
-        <!-- Interval Settings -->
         <div class="setting-group">
           <h4>Review Intervals</h4>
           
@@ -292,7 +288,6 @@
           </div>
         </div>
 
-        <!-- Difficulty Multipliers -->
         <div class="setting-group">
           <h4>Difficulty Adjustments</h4>
           
@@ -338,7 +333,6 @@
           </div>
         </div>
 
-        <!-- Search Settings -->
         <div class="setting-group">
           <h4>Search & Content</h4>
           
@@ -387,7 +381,15 @@
     padding-bottom: var(--space-md);
     border-bottom: 1px solid var(--border);
   }
-
+  .sticky-header {
+    position: sticky;
+    top: -40px;
+    background: var(--background);
+    z-index: 10;
+    padding-top: var(--space-lg);
+    margin-top: calc(var(--space-lg) * -1);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  }
   .section-header h3 {
     margin: 0;
     font-size: 1.25rem;

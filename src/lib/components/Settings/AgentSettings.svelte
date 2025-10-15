@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
   import { invoke } from '@tauri-apps/api/core';
+  import { RefreshCw } from 'lucide-svelte';
 
   // Stores
   import { llmStore } from '../../stores/llmStore';
@@ -18,6 +19,7 @@
   let agentSettingsChanged = false;
   let availableModels = {};
   let enabledProviders = [];
+  let reloadingModels = false;
 
   // Store subscription
   let unsubscribe;
@@ -89,8 +91,24 @@
   }
 
   async function refreshModelsAndSettings() {
-    await loadAvailableModels();
-    await loadCurrentAgentModels();
+    reloadingModels = true;
+    try {
+      const rawProviders: [] = await invoke('get_enabled_providers');
+      
+      for (const provider of rawProviders) {
+        try {
+          console.log("Refreshing models for provider:", provider);
+          await invoke('refresh_provider_models', { provider });
+        } catch (error) {
+          console.warn(`Failed to refresh models for ${provider}:`, error);
+        }
+      }
+      
+      await loadAvailableModels();
+      await loadCurrentAgentModels();
+    } finally {
+      reloadingModels = false;
+    }
   }
 
   async function saveAgentSettings() {
@@ -182,9 +200,18 @@
 <div class="tab-content">
   {#if agentSettings}
     <div class="settings-section">
-      <div class="section-header">
+      <div class="section-header sticky-header">
         <h3>Agent Configuration</h3>
         <div class="section-actions">
+          <button 
+            class="action-button reload"
+            on:click={refreshModelsAndSettings}
+            disabled={reloadingModels}
+            title="Reload models from all providers"
+          >
+            <RefreshCw size={16} class={reloadingModels ? 'spinning' : ''} />
+            <span>{reloadingModels ? 'Reloading...' : 'Reload Models'}</span>
+          </button>
           <button 
             class="action-button save"
             class:changed={agentSettingsChanged}
@@ -344,6 +371,16 @@
     border-bottom: 1px solid var(--border);
   }
 
+  .sticky-header {
+    position: sticky;
+    top: -40px;
+    background: var(--background);
+    z-index: 10;
+    padding-top: var(--space-lg);
+    margin-top: calc(var(--space-lg) * -1);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  }
+
   .section-header h3 {
     margin: 0;
     font-size: 1.25rem;
@@ -391,6 +428,24 @@
   .action-button.danger {
     background: var(--error);
     color: white;
+  }
+
+  .action-button.reload {
+    background: var(--info);
+    color: white;
+  }
+
+  :global(.spinning) {
+    animation: spin 1s linear infinite;
+  }
+
+  @keyframes spin {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
   }
 
   .info-banner {

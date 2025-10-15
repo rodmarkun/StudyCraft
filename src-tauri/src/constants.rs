@@ -65,7 +65,7 @@ pub const ALL_PROVIDER_TYPES: [ProviderType; 5] = [
     ProviderType::Google,
     ProviderType::Ollama,
 ];
-pub const OLLAMA_CUSTOM_ENDPOINT: &str = "http://localhost:11434/api/chat";
+pub const OLLAMA_CUSTOM_ENDPOINT: &str = "http://localhost:11434";
 
 // Prompts
 pub const CONCEPT_EXTRACTOR_PROMPT: &str =

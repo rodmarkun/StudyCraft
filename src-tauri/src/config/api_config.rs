@@ -4,6 +4,7 @@ use crate::config::APP_PATHS;
 use crate::constants::{ALL_PROVIDER_TYPES, API_SETTINGS_FILE_NAME};
 use crate::errors::{AppError, AppResult};
 use flyllm::{ModelDiscovery, ProviderType};
+use crate::constants;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
@@ -14,6 +15,8 @@ pub struct ProviderConfig {
     pub provider: String,
     pub available_models: Vec<String>,
     pub enabled: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub endpoint_url: Option<String>,
 }
 
 impl Default for ProviderConfig {
@@ -22,6 +25,7 @@ impl Default for ProviderConfig {
             provider: String::new(),
             available_models: Vec::new(),
             enabled: false,
+            endpoint_url: None,
         }
     }
 }
@@ -279,7 +283,13 @@ impl LlmUserConfig {
             .ok_or_else(|| AppError::ApiError(format!("Provider '{}' not found", provider_str)))?;
 
         let models = if provider_type == ProviderType::Ollama {
-            ModelDiscovery::list_ollama_models(None)
+            // Determine the endpoint to use
+            let endpoint_to_use = config.endpoint_url
+                .clone()
+                .or_else(|| self.get_ollama_endpoint().ok().flatten())
+                .unwrap_or_else(|| constants::OLLAMA_CUSTOM_ENDPOINT.to_string());
+        
+            ModelDiscovery::list_ollama_models(Some(&endpoint_to_use))
                 .await
                 .map_err(|e| AppError::ApiError(format!("Failed to fetch Ollama models: {}", e)))?
                 .into_iter()
@@ -380,5 +390,29 @@ impl LlmUserConfig {
         }
 
         issues
+    }
+
+    pub fn set_ollama_endpoint(&mut self, endpoint_url: Option<String>) -> AppResult<()> {
+        let provider_type = ProviderType::Ollama;
+        
+        if let Some(config) = self.provider_configs.get_mut(&provider_type) {
+            config.endpoint_url = endpoint_url.clone();
+        }
+        
+        self.save()
+    }
+
+    pub fn get_ollama_endpoint(&self) -> AppResult<Option<String>> {
+        self.get_endpoint_url("Ollama")
+    }
+
+    fn get_endpoint_url(&self, provider_str: &str) -> AppResult<Option<String>> {
+        let provider_type =
+            internal_str_to_provider_type(provider_str).map_err(|e| AppError::ConfigError(e))?;
+
+        Ok(self
+            .provider_configs
+            .get(&provider_type)
+            .and_then(|config| config.endpoint_url.clone()))
     }
 }

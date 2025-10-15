@@ -269,3 +269,27 @@ pub fn get_all_agents() -> Result<Vec<String>, String> {
         .map(|a| a.as_str().to_string())
         .collect())
 }
+
+#[tauri::command]
+pub async fn set_ollama_endpoint(
+    state: State<'_, AppState>,
+    endpoint_url: String,
+) -> Result<(), String> {
+    let mut config = LlmUserConfig::load().map_err(|e| e.to_string())?;
+    config.set_ollama_endpoint(Some(endpoint_url)).map_err(|e| e.to_string())?;
+    state
+        .rebuild_llm_service()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn get_ollama_endpoint() -> Result<String, String> {
+    let config = LlmUserConfig::load().map_err(|e| e.to_string())?;
+    config
+        .get_ollama_endpoint()
+        .map_err(|e| e.to_string())?
+        .ok_or_else(|| "No custom Ollama endpoint configured".to_string())
+}

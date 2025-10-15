@@ -111,6 +111,8 @@ async fn main() {
             api::is_provider_configured,
             api::validate_provider_setup,
             api::get_all_agent_model_configs,
+            api::set_ollama_endpoint,
+            api::get_ollama_endpoint,
             // Settings commands
             settings::get_study_settings,
             settings::update_study_settings,

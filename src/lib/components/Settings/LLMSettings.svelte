@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import { invoke } from '@tauri-apps/api/core';
   import { open } from '@tauri-apps/plugin-shell';
+  import { Antenna } from 'lucide-svelte';
 
   // Stores
   import { llmStore } from '../../stores/llmStore';
@@ -17,18 +18,20 @@
   let providers = [];
   let providerConfigs = {};
   let validatingKeys = {};
+  let ollamaEndpoint = '';
+  let loadingOllamaEndpoint = false;
+
+  const DEFAULT_OLLAMA_ENDPOINT = 'http://localhost:11434';
 
   // Functions
   async function loadProviders() {
     try {
       const rawProviders: [] = await invoke('get_providers');
-      // Sort providers alphabetically
       providers = rawProviders.sort();
       
       providerConfigs = {};
       validatingKeys = {};
       
-      // Load existing configs
       for (const provider of providers) {
         try {
           const config: ProviderConfig = await invoke('get_provider_config', { provider });
@@ -60,6 +63,37 @@
     }
   }
 
+  async function loadOllamaEndpoint() {
+    try {
+      const endpoint = await invoke('get_ollama_endpoint');
+      ollamaEndpoint = endpoint;
+    } catch (error) {
+      ollamaEndpoint = '';
+    }
+  }
+
+  async function saveOllamaEndpoint() {
+    try {
+      loadingOllamaEndpoint = true;
+      let endpointToSave = ollamaEndpoint.trim() || DEFAULT_OLLAMA_ENDPOINT;
+      
+      if (endpointToSave && !endpointToSave.startsWith('http://') && !endpointToSave.startsWith('https://')) {
+        alert('Endpoint must start with http:// or https://');
+        return;
+      }
+      
+      await invoke('set_ollama_endpoint', { endpointUrl: endpointToSave });
+      
+      clearError();
+      alert('Ollama endpoint saved successfully');
+    } catch (error) {
+      console.error('Failed to save Ollama endpoint:', error);
+      handleError(`Failed to save Ollama endpoint: ${error.message || error}`);
+    } finally {
+      loadingOllamaEndpoint = false;
+    }
+  }
+
   async function validateApiKey(provider) {
     const config = providerConfigs[provider];
     
@@ -85,7 +119,7 @@
       } else {
         config.keyValidated = false;
         providerConfigs = { ...providerConfigs };
-        alert(`${provider === 'ollama' ? 'Connection failed' : 'API key validation failed'}: ${result.error_message || 'Unknown error'}`);
+        alert(`${provider === 'ollama' ? 'Connection failed' : 'API validation failed'}: ${result.error_message || 'Unknown error'}`);
       }
     } catch (error) {
       console.error(`Failed to validate API key for ${provider}:`, error);
@@ -107,7 +141,6 @@
       config.enabled = false;
       await invoke('clear_api_key', { provider });
     } else {
-      // Save the API key
       try {
         await invoke('set_api_key', { provider, apiKey });
         clearError();
@@ -145,6 +178,9 @@
 
   function isProviderConfigured(provider) {
     const config = providerConfigs[provider];
+    if (provider.toLowerCase() === 'ollama') {
+      return config.enabled;
+    }
     return config.keyValidated && config.enabled;
   }
 
@@ -185,6 +221,7 @@
 
 onMount(async () => {
     await loadProviders();
+    await loadOllamaEndpoint();
   });
 </script>
 
@@ -239,71 +276,93 @@ onMount(async () => {
             </div>
           </div>
           
-          <!-- API Key Section -->
-          <div class="config-row">
-            <p class="config-label">
-              {provider.toLowerCase() === 'ollama' ? 'Connection' : 'API Key'}
-            </p>
-            <div class="input-group">
-              <input 
-                type="password"
-                value={config.api_key}
-                on:input={(e) => {
-                  const target = e.target as HTMLInputElement;
-                  updateApiKey(provider, target.value);
-                }}
-                placeholder={provider.toLowerCase() === 'ollama' ? 'Not required for Ollama' : 'Enter your API key'}
-                disabled={provider.toLowerCase() === 'ollama'}
-                class="config-input"
-              />
-              <button 
-                class="action-button validate"
-                on:click={() => validateApiKey(provider)}
-                disabled={validatingKeys[provider] || (!config.api_key.trim() && provider.toLowerCase() !== 'ollama')}
-                title={provider.toLowerCase() === 'ollama' ? 'Test connection to Ollama' : 'Validate API key'}
-              >
-                {#if validatingKeys[provider]}
-                  <svg class="spinner" viewBox="0 0 24 24" width="16" height="16">
-                    <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2" />
-                  </svg>
-                {:else if provider.toLowerCase() === 'ollama'}
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M16 21h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
-                  </svg>
-                {:else}
+          {#if provider.toLowerCase() === 'ollama'}
+            <div class="config-row">
+              <p class="config-label">Custom Endpoint (Optional)</p>
+              <div class="input-group">
+                <input 
+                  type="text"
+                  bind:value={ollamaEndpoint}
+                  placeholder="http://localhost:11434"
+                  class="config-input"
+                />
+                <button 
+                  class="action-button save"
+                  on:click={saveOllamaEndpoint}
+                  disabled={loadingOllamaEndpoint}
+                  title="Save custom endpoint"
+                >
+                  {#if loadingOllamaEndpoint}
+                    <svg class="spinner" viewBox="0 0 24 24" width="16" height="16">
+                      <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2" />
+                    </svg>
+                  {:else}
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                      <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                      <polyline points="7 3 7 8 15 8"></polyline>
+                    </svg>
+                  {/if}
+                </button>
+              </div>
+              <p class="config-help-text">Leave empty to use default (http://localhost:11434)</p>
+            </div>
+          {:else}
+            <div class="config-row">
+              <p class="config-label">API Key</p>
+              <div class="input-group">
+                <input 
+                  type="password"
+                  value={config.api_key}
+                  on:input={(e) => {
+                    const target = e.target as HTMLInputElement;
+                    updateApiKey(provider, target.value);
+                  }}
+                  placeholder="Enter your API key"
+                  class="config-input"
+                />
+                <button 
+                  class="action-button validate"
+                  on:click={() => validateApiKey(provider)}
+                  disabled={validatingKeys[provider] || !config.api_key.trim()}
+                  title="Validate API key"
+                >
+                  {#if validatingKeys[provider]}
+                    <svg class="spinner" viewBox="0 0 24 24" width="16" height="16">
+                      <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2" />
+                    </svg>
+                  {:else}
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                      <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                    </svg>
+                  {/if}
+                </button>
+              </div>
+              
+              {#if config.keyValidated}
+                <div class="validation-status success">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
                     <polyline points="22 4 12 14.01 9 11.01"></polyline>
                   </svg>
-                {/if}
-              </button>
+                  API key is valid
+                </div>
+              {:else if config.api_key && !validatingKeys[provider]}
+                <div class="validation-status pending">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <path d="M12 16v-4"></path>
+                    <path d="M12 8h.01"></path>
+                  </svg>
+                  Click validate to test API key
+                </div>
+              {/if}
             </div>
-            
-            {#if config.keyValidated}
-              <div class="validation-status success">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-                  <polyline points="22 4 12 14.01 9 11.01"></polyline>
-                </svg>
-                {provider.toLowerCase() === 'ollama' ? 'Connection successful' : 'API key is valid'}
-              </div>
-            {:else if config.api_key && !validatingKeys[provider]}
-              <div class="validation-status pending">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <circle cx="12" cy="12" r="10"></circle>
-                  <path d="M12 16v-4"></path>
-                  <path d="M12 8h.01"></path>
-                </svg>
-                Click validate to test {provider.toLowerCase() === 'ollama' ? 'connection' : 'API key'}
-              </div>
-            {/if}
-          </div>
+          {/if}
           
-          <!-- Configuration Help -->
           <div class="config-help">
-            {#if provider.toLowerCase() === 'ollama'}
-              <p>Make sure Ollama is running locally on port 11434.</p>
-            {:else}
+            {#if provider.toLowerCase() !== 'ollama'}
               {@const apiUrl = getProviderApiUrl(provider)}
               {@const displayName = getProviderDisplayName(provider)}
               {#if apiUrl}
@@ -311,6 +370,38 @@ onMount(async () => {
               {:else}
                 <p>Get your API key from the {displayName}</p>
               {/if}
+            
+            {:else}
+            <div class="config-row">
+              <div class="input-group">
+                <button 
+                  class="action-button validate full-width"
+                  on:click={() => validateApiKey(provider)}
+                  disabled={validatingKeys[provider]}
+                  title="Test connection to Ollama"
+                >
+                  {#if validatingKeys[provider]}
+                    <svg class="spinner" viewBox="0 0 24 24" width="16" height="16">
+                      <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2" />
+                    </svg>
+                    Testing Connection...
+                  {:else}
+                    <Antenna size={16} />
+                    Test Connection
+                  {/if}
+                </button>
+              </div>
+              
+              {#if config.keyValidated}
+                <div class="validation-status success">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                    <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                  </svg>
+                  Connection successful
+                </div>
+              {/if}
+            </div>
             {/if}
           </div>
         </div>
@@ -539,6 +630,13 @@ onMount(async () => {
     box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 20%, transparent);
   }
 
+  .config-help-text {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin: 0;
+    margin-top: calc(var(--space-xs) * -1);
+  }
+
   .action-button {
     background: var(--accent);
     color: white;
@@ -553,6 +651,10 @@ onMount(async () => {
     transition: all var(--transition-speed) ease;
     min-width: 40px;
     height: 40px;
+  }
+
+  .action-button.full-width {
+    width: 100%;
   }
 
   .action-button:hover:not(:disabled) {
