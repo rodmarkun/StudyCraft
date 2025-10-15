@@ -45,6 +45,7 @@ pub struct ProviderConfigResponse {
     pub enabled: bool,
     pub available_models: Vec<String>,
     pub is_configured: bool,
+    pub endpoint_url: Option<String>,
 }
 
 #[derive(Serialize)]

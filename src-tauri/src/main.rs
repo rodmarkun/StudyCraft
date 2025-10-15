@@ -111,6 +111,8 @@ async fn main() {
             api::is_provider_configured,
             api::validate_provider_setup,
             api::get_all_agent_model_configs,
+            api::set_provider_custom_endpoint,
+            api::get_provider_custom_endpoint,
             api::set_ollama_endpoint,
             api::get_ollama_endpoint,
             // Settings commands

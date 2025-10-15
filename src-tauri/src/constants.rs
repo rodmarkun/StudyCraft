@@ -58,14 +58,16 @@ pub const CONTENT_SELECTORS: [&'static str; 7] = [
     "body",
 ];
 // LLMs
-pub const ALL_PROVIDER_TYPES: [ProviderType; 5] = [
+pub const ALL_PROVIDER_TYPES: [ProviderType; 6] = [
     ProviderType::OpenAI,
     ProviderType::Anthropic,
     ProviderType::Mistral,
     ProviderType::Google,
     ProviderType::Ollama,
+    ProviderType::LmStudio,
 ];
 pub const OLLAMA_CUSTOM_ENDPOINT: &str = "http://localhost:11434";
+pub const LM_STUDIO_DEFAULT_ENDPOINT: &str = "http://127.0.0.1:1234";
 
 // Prompts
 pub const CONCEPT_EXTRACTOR_PROMPT: &str =
@@ -87,6 +89,7 @@ pub fn get_default_agent_model(agent: &AgentType, provider: &ProviderType) -> &'
         (AgentType::ConceptExtractor, ProviderType::Google) => "gemini-2.5-flash",
         (AgentType::ConceptExtractor, ProviderType::Mistral) => "mistral-large-latest",
         (AgentType::ConceptExtractor, ProviderType::Ollama) => "llama3",
+        (AgentType::ConceptExtractor, ProviderType::LmStudio) => "openai/gpt-oss-20b",
 
         // FlashcardContentCreator
         (AgentType::FlashcardContentCreator, ProviderType::OpenAI) => "gpt-4.1-mini-2025-04-14",
@@ -94,6 +97,7 @@ pub fn get_default_agent_model(agent: &AgentType, provider: &ProviderType) -> &'
         (AgentType::FlashcardContentCreator, ProviderType::Google) => "gemini-2.5-flash",
         (AgentType::FlashcardContentCreator, ProviderType::Mistral) => "mistral-large-latest",
         (AgentType::FlashcardContentCreator, ProviderType::Ollama) => "llama3",
+        (AgentType::FlashcardContentCreator, ProviderType::LmStudio) => "openai/gpt-oss-20b",
 
         // TestContentCreator
         (AgentType::TestContentCreator, ProviderType::OpenAI) => "gpt-4.1-mini-2025-04-14",
@@ -101,6 +105,7 @@ pub fn get_default_agent_model(agent: &AgentType, provider: &ProviderType) -> &'
         (AgentType::TestContentCreator, ProviderType::Google) => "gemini-2.5-flash",
         (AgentType::TestContentCreator, ProviderType::Mistral) => "mistral-large-latest",
         (AgentType::TestContentCreator, ProviderType::Ollama) => "llama3",
+        (AgentType::TestContentCreator, ProviderType::LmStudio) => "openai/gpt-oss-20b",
 
         // ExplanationAgent
         (AgentType::ExplanationAgent, ProviderType::OpenAI) => "gpt-4.1-mini-2025-04-14",
@@ -108,6 +113,7 @@ pub fn get_default_agent_model(agent: &AgentType, provider: &ProviderType) -> &'
         (AgentType::ExplanationAgent, ProviderType::Google) => "gemini-2.5-flash",
         (AgentType::ExplanationAgent, ProviderType::Mistral) => "mistral-large-latest",
         (AgentType::ExplanationAgent, ProviderType::Ollama) => "llama3",
+        (AgentType::ExplanationAgent, ProviderType::LmStudio) => "openai/gpt-oss-20b",
 
         // SearchAgent
         (AgentType::SearchAgent, ProviderType::OpenAI) => "gpt-4.1-mini-2025-04-14",
@@ -115,6 +121,6 @@ pub fn get_default_agent_model(agent: &AgentType, provider: &ProviderType) -> &'
         (AgentType::SearchAgent, ProviderType::Google) => "gemini-2.5-flash",
         (AgentType::SearchAgent, ProviderType::Mistral) => "mistral-large-latest",
         (AgentType::SearchAgent, ProviderType::Ollama) => "llama3",
-
+        (AgentType::SearchAgent, ProviderType::LmStudio) => "openai/gpt-oss-20b",
     }
 }

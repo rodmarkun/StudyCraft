@@ -1,10 +1,10 @@
 use crate::config::keystore::ApiKeystore;
 use crate::config::utils::internal_str_to_provider_type;
 use crate::config::APP_PATHS;
+use crate::constants;
 use crate::constants::{ALL_PROVIDER_TYPES, API_SETTINGS_FILE_NAME};
 use crate::errors::{AppError, AppResult};
 use flyllm::{ModelDiscovery, ProviderType};
-use crate::constants;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
@@ -239,7 +239,9 @@ impl LlmUserConfig {
             internal_str_to_provider_type(provider_str).map_err(|e| AppError::ConfigError(e))?;
 
         if let Some(config) = self.provider_configs.get(&provider_type) {
-            let has_key = if provider_type == ProviderType::Ollama {
+            let has_key = if provider_type == ProviderType::Ollama
+                || provider_type == ProviderType::LmStudio
+            {
                 true
             } else {
                 let keystore = ApiKeystore::new();
@@ -282,43 +284,65 @@ impl LlmUserConfig {
             .get(&provider_type)
             .ok_or_else(|| AppError::ApiError(format!("Provider '{}' not found", provider_str)))?;
 
-        let models = if provider_type == ProviderType::Ollama {
-            // Determine the endpoint to use
-            let endpoint_to_use = config.endpoint_url
-                .clone()
-                .or_else(|| self.get_ollama_endpoint().ok().flatten())
-                .unwrap_or_else(|| constants::OLLAMA_CUSTOM_ENDPOINT.to_string());
-        
-            ModelDiscovery::list_ollama_models(Some(&endpoint_to_use))
-                .await
-                .map_err(|e| AppError::ApiError(format!("Failed to fetch Ollama models: {}", e)))?
-                .into_iter()
-                .map(|m| m.name)
-                .collect()
-        } else {
-            let keystore = ApiKeystore::new();
-            let api_key = keystore.get_api_key(provider_str)?.ok_or_else(|| {
-                AppError::ApiError(format!("API key required for provider '{}'", provider_str))
-            })?;
+        let models = match provider_type {
+            ProviderType::Ollama => {
+                let endpoint_to_use = config
+                    .endpoint_url
+                    .clone()
+                    .or_else(|| self.get_ollama_endpoint().ok().flatten())
+                    .unwrap_or_else(|| constants::OLLAMA_CUSTOM_ENDPOINT.to_string());
 
-            let discovered_models = match provider_type {
-                ProviderType::OpenAI => ModelDiscovery::list_openai_models(&api_key).await,
-                ProviderType::Anthropic => ModelDiscovery::list_anthropic_models(&api_key).await,
-                ProviderType::Mistral => ModelDiscovery::list_mistral_models(&api_key).await,
-                ProviderType::Google => ModelDiscovery::list_google_models(&api_key).await,
-                _ => {
-                    return Err(AppError::ApiError(format!(
-                        "Model discovery not supported for provider '{}'",
-                        provider_str
-                    )));
-                }
-            };
+                ModelDiscovery::list_ollama_models(Some(&endpoint_to_use))
+                    .await
+                    .map_err(|e| {
+                        AppError::ApiError(format!("Failed to fetch Ollama models: {}", e))
+                    })?
+                    .into_iter()
+                    .map(|m| m.name)
+                    .collect()
+            }
+            ProviderType::LmStudio => {
+                let endpoint_to_use = config
+                    .endpoint_url
+                    .clone()
+                    .unwrap_or_else(|| constants::LM_STUDIO_DEFAULT_ENDPOINT.to_string());
 
-            discovered_models
-                .map_err(|e| AppError::ApiError(format!("Failed to fetch models: {}", e)))?
-                .into_iter()
-                .map(|m| m.name)
-                .collect()
+                ModelDiscovery::list_lmstudio_models(Some(&endpoint_to_use))
+                    .await
+                    .map_err(|e| {
+                        AppError::ApiError(format!("Failed to fetch LM Studio models: {}", e))
+                    })?
+                    .into_iter()
+                    .map(|m| m.name)
+                    .collect()
+            }
+            _ => {
+                let keystore = ApiKeystore::new();
+                let api_key = keystore.get_api_key(provider_str)?.ok_or_else(|| {
+                    AppError::ApiError(format!("API key required for provider '{}'", provider_str))
+                })?;
+
+                let discovered_models = match provider_type {
+                    ProviderType::OpenAI => ModelDiscovery::list_openai_models(&api_key).await,
+                    ProviderType::Anthropic => {
+                        ModelDiscovery::list_anthropic_models(&api_key).await
+                    }
+                    ProviderType::Mistral => ModelDiscovery::list_mistral_models(&api_key).await,
+                    ProviderType::Google => ModelDiscovery::list_google_models(&api_key).await,
+                    _ => {
+                        return Err(AppError::ApiError(format!(
+                            "Model discovery not supported for provider '{}'",
+                            provider_str
+                        )));
+                    }
+                };
+
+                discovered_models
+                    .map_err(|e| AppError::ApiError(format!("Failed to fetch models: {}", e)))?
+                    .into_iter()
+                    .map(|m| m.name)
+                    .collect()
+            }
         };
 
         self.set_available_models(provider_str, models)
@@ -369,7 +393,7 @@ impl LlmUserConfig {
     pub fn validate_provider_setup(&self, provider: String) -> Vec<String> {
         let mut issues = Vec::new();
         if let Ok(provider_config) = self.get_provider_config(&provider) {
-            if provider != "Ollama" {
+            if provider != "Ollama" && provider != "LmStudio" {
                 let keystore = ApiKeystore::new();
                 match keystore.get_api_key(&provider) {
                     Ok(Some(_)) => {}
@@ -392,18 +416,37 @@ impl LlmUserConfig {
         issues
     }
 
-    pub fn set_ollama_endpoint(&mut self, endpoint_url: Option<String>) -> AppResult<()> {
-        let provider_type = ProviderType::Ollama;
-        
-        if let Some(config) = self.provider_configs.get_mut(&provider_type) {
-            config.endpoint_url = endpoint_url.clone();
-        }
-        
+    pub fn set_provider_endpoint(
+        &mut self,
+        provider_str: &str,
+        endpoint_url: Option<String>,
+    ) -> AppResult<()> {
+        let provider_type =
+            internal_str_to_provider_type(provider_str).map_err(|e| AppError::ConfigError(e))?;
+
+        let config = self
+            .provider_configs
+            .get_mut(&provider_type)
+            .ok_or_else(|| AppError::ApiError(format!("Provider '{}' not found", provider_str)))?;
+
+        config.endpoint_url = endpoint_url;
         self.save()
     }
 
+    pub fn get_provider_endpoint(&self, provider_str: &str) -> AppResult<Option<String>> {
+        self.get_endpoint_url(provider_str)
+    }
+
+    pub fn set_ollama_endpoint(&mut self, endpoint_url: Option<String>) -> AppResult<()> {
+        self.set_provider_endpoint("Ollama", endpoint_url)
+    }
+
     pub fn get_ollama_endpoint(&self) -> AppResult<Option<String>> {
-        self.get_endpoint_url("Ollama")
+        self.get_provider_endpoint("Ollama")
+    }
+
+    pub fn get_lmstudio_endpoint(&self) -> AppResult<Option<String>> {
+        self.get_provider_endpoint("LmStudio")
     }
 
     fn get_endpoint_url(&self, provider_str: &str) -> AppResult<Option<String>> {
@@ -414,5 +457,29 @@ impl LlmUserConfig {
             .provider_configs
             .get(&provider_type)
             .and_then(|config| config.endpoint_url.clone()))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use flyllm::ProviderType;
+
+    #[test]
+    fn default_config_includes_lmstudio() {
+        let config = LlmUserConfig::default();
+        assert!(config
+            .provider_configs
+            .contains_key(&ProviderType::LmStudio));
+    }
+
+    #[test]
+    fn set_lmstudio_endpoint_persists_value() {
+        let mut config = LlmUserConfig::default();
+        let endpoint = Some("http://localhost:1234".to_string());
+        config
+            .set_provider_endpoint("LmStudio", endpoint.clone())
+            .expect("should set endpoint");
+        assert_eq!(config.get_provider_endpoint("LmStudio").unwrap(), endpoint);
     }
 }

@@ -4,6 +4,7 @@
     enabled?: boolean;
     available_models?: string[]; 
     is_configured?: boolean;
+    endpoint_url?: string | null;
   }
 
   export interface ValidationResult {

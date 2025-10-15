@@ -2,7 +2,8 @@ use crate::commands::structure::responses;
 use crate::config::api_config::LlmUserConfig;
 use crate::config::app_settings::AgentSettings;
 use crate::config::keystore::ApiKeystore;
-use crate::config::utils::{internal_str_to_provider_type, str_to_agent_type};
+use crate::config::utils::str_to_agent_type;
+use crate::constants;
 use crate::services::llm_service::agents::AgentType;
 use crate::state::AppState;
 use std::collections::HashMap;
@@ -155,6 +156,7 @@ pub fn get_provider_config(provider: String) -> Result<responses::ProviderConfig
         enabled: provider_config.enabled,
         available_models: provider_config.available_models,
         is_configured,
+        endpoint_url: provider_config.endpoint_url.clone(),
     })
 }
 
@@ -271,12 +273,25 @@ pub fn get_all_agents() -> Result<Vec<String>, String> {
 }
 
 #[tauri::command]
-pub async fn set_ollama_endpoint(
+pub async fn set_provider_custom_endpoint(
     state: State<'_, AppState>,
-    endpoint_url: String,
+    provider: String,
+    endpoint_url: Option<String>,
 ) -> Result<(), String> {
+    let normalized_endpoint = endpoint_url.and_then(|value| {
+        let trimmed = value.trim().to_string();
+        if trimmed.is_empty() {
+            None
+        } else {
+            Some(trimmed)
+        }
+    });
+
     let mut config = LlmUserConfig::load().map_err(|e| e.to_string())?;
-    config.set_ollama_endpoint(Some(endpoint_url)).map_err(|e| e.to_string())?;
+    config
+        .set_provider_endpoint(&provider, normalized_endpoint)
+        .map_err(|e| e.to_string())?;
+
     state
         .rebuild_llm_service()
         .await
@@ -286,10 +301,25 @@ pub async fn set_ollama_endpoint(
 }
 
 #[tauri::command]
-pub async fn get_ollama_endpoint() -> Result<String, String> {
+pub fn get_provider_custom_endpoint(provider: String) -> Result<Option<String>, String> {
     let config = LlmUserConfig::load().map_err(|e| e.to_string())?;
     config
-        .get_ollama_endpoint()
-        .map_err(|e| e.to_string())?
+        .get_provider_endpoint(&provider)
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn set_ollama_endpoint(
+    state: State<'_, AppState>,
+    endpoint_url: String,
+) -> Result<(), String> {
+    set_provider_custom_endpoint(state, "Ollama".to_string(), Some(endpoint_url)).await
+}
+
+#[tauri::command]
+pub async fn get_ollama_endpoint() -> Result<String, String> {
+    let endpoint = get_provider_custom_endpoint("Ollama".to_string()).map_err(|e| e.to_string())?;
+    endpoint
+        .or_else(|| Some(constants::OLLAMA_CUSTOM_ENDPOINT.to_string()))
         .ok_or_else(|| "No custom Ollama endpoint configured".to_string())
 }
