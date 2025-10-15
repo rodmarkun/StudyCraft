@@ -1268,6 +1268,12 @@ async fn build_llm_manager_from_config(
         .flatten()
         .unwrap_or_else(|| constants::OLLAMA_CUSTOM_ENDPOINT.to_string());
 
+    let lmstudio_endpoint = config
+        .get_lmstudio_endpoint()
+        .ok()
+        .flatten()
+        .unwrap_or_else(|| constants::LM_STUDIO_DEFAULT_ENDPOINT.to_string());
+
     // For each enabled provider, create instances for each agent type that has a model configured
     for (provider_type, provider_config) in &config.provider_configs {
         if !provider_config.enabled {
@@ -1275,28 +1281,29 @@ async fn build_llm_manager_from_config(
         }
 
         // Get API key from keystore
-        let api_key = if *provider_type == ProviderType::Ollama {
-            String::new()
-        } else {
-            let provider_str = format!("{:?}", provider_type);
-            match keystore.get_api_key(&provider_str) {
-                Ok(Some(key)) => key,
-                Ok(None) => {
-                    eprintln!(
-                        "Skipping provider {:?}: API key required but not found in keystore",
-                        provider_type
-                    );
-                    continue;
+        let api_key =
+            if *provider_type == ProviderType::Ollama || *provider_type == ProviderType::LmStudio {
+                String::new()
+            } else {
+                let provider_str = format!("{:?}", provider_type);
+                match keystore.get_api_key(&provider_str) {
+                    Ok(Some(key)) => key,
+                    Ok(None) => {
+                        eprintln!(
+                            "Skipping provider {:?}: API key required but not found in keystore",
+                            provider_type
+                        );
+                        continue;
+                    }
+                    Err(e) => {
+                        eprintln!(
+                            "Skipping provider {:?}: Failed to retrieve API key from keystore: {}",
+                            provider_type, e
+                        );
+                        continue;
+                    }
                 }
-                Err(e) => {
-                    eprintln!(
-                        "Skipping provider {:?}: Failed to retrieve API key from keystore: {}",
-                        provider_type, e
-                    );
-                    continue;
-                }
-            }
-        };
+            };
 
         // Create a separate instance for each agent type that has a model configured for this provider
         for agent_type in AgentType::all() {
@@ -1314,6 +1321,10 @@ async fn build_llm_manager_from_config(
                             .add_instance(*provider_type, model_name, "")
                             .supports(&task_name)
                             .custom_endpoint(&ollama_endpoint),
+                        ProviderType::LmStudio => builder
+                            .add_instance(*provider_type, model_name, "")
+                            .supports(&task_name)
+                            .custom_endpoint(&lmstudio_endpoint),
                         _ => builder
                             .add_instance(*provider_type, model_name, &api_key)
                             .supports(&task_name),
@@ -1345,17 +1356,17 @@ async fn build_llm_manager_from_config(
 
 fn clean_json_content(content: &str) -> String {
     let trimmed = content.trim();
-    let without_prefix = trimmed.strip_prefix("```json")
-                                .or_else(|| trimmed.strip_prefix("```"))
-                                .unwrap_or(trimmed);
-   
-    let without_suffix = without_prefix.strip_suffix("```")
-                                       .unwrap_or(without_prefix);
-    
+    let without_prefix = trimmed
+        .strip_prefix("```json")
+        .or_else(|| trimmed.strip_prefix("```"))
+        .unwrap_or(trimmed);
+
+    let without_suffix = without_prefix.strip_suffix("```").unwrap_or(without_prefix);
+
     let cleaned = without_suffix
-           .replace("**", "")  // Remove bold markers
-           .replace("*****", "")  // Remove emphasis markers
-           .replace("*", "");  // Remove remaining asterisks
+        .replace("**", "") // Remove bold markers
+        .replace("*****", "") // Remove emphasis markers
+        .replace("*", ""); // Remove remaining asterisks
 
     sanitize_json_strings(cleaned.trim())
 }

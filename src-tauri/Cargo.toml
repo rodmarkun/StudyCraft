@@ -57,3 +57,5 @@ regex = "1.11.2"
 tauri-plugin-shell = "2"
 chromiumoxide = { version = "0.7", features = ["tokio-runtime", "_fetcher-rusttls-tokio"], default-features = false }
 base64 = "0.22.1"
+[patch.crates-io]
+flyllm = { path = "../crates/flyllm" }

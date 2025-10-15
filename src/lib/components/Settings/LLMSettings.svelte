@@ -8,7 +8,7 @@
   import { llmStore } from '../../stores/llmStore';
 
   // Types
-  import {type ProviderConfig, type ValidationResult} from '../../logic/Settings/types'
+  import { type ProviderConfig, type ValidationResult } from '../../logic/Settings/types';
 
   // Props
   export let handleError = (error) => {};
@@ -18,30 +18,37 @@
   let providers = [];
   let providerConfigs = {};
   let validatingKeys = {};
-  let ollamaEndpoint = '';
-  let loadingOllamaEndpoint = false;
+  let providerEndpoints = {};
+  let endpointLoading = {};
 
-  const DEFAULT_OLLAMA_ENDPOINT = 'http://localhost:11434';
+  const DEFAULT_ENDPOINTS: Record<string, string> = {
+    ollama: 'http://localhost:11434',
+    lmstudio: 'http://127.0.0.1:1234'
+  };
 
-  // Functions
   async function loadProviders() {
     try {
       const rawProviders: [] = await invoke('get_providers');
       providers = rawProviders.sort();
-      
+
       providerConfigs = {};
       validatingKeys = {};
-      
+      providerEndpoints = {};
+      endpointLoading = {};
+
       for (const provider of providers) {
         try {
           const config: ProviderConfig = await invoke('get_provider_config', { provider });
+          const endpointProvider = hasCustomEndpoint(provider);
+
           providerConfigs[provider] = {
             provider_id: provider,
             api_key: config.api_key || '',
             enabled: config.enabled || false,
             is_configured: config.is_configured || false,
-            keyValidated: config.api_key ? true : false
+            keyValidated: endpointProvider ? !!config.is_configured : !!config.api_key,
           };
+          providerEndpoints[provider] = config.endpoint_url || '';
         } catch (error) {
           console.error(`Failed to load config for ${provider}:`, error);
           providerConfigs[provider] = {
@@ -49,13 +56,17 @@
             api_key: '',
             enabled: false,
             is_configured: false,
-            keyValidated: false
+            keyValidated: false,
           };
+          providerEndpoints[provider] = '';
         }
         validatingKeys[provider] = false;
+        endpointLoading[provider] = false;
       }
-      
+
       providerConfigs = { ...providerConfigs };
+      providerEndpoints = { ...providerEndpoints };
+      endpointLoading = { ...endpointLoading };
       clearError();
     } catch (error) {
       console.error('Failed to load providers:', error);
@@ -63,69 +74,96 @@
     }
   }
 
-  async function loadOllamaEndpoint() {
-    try {
-      const endpoint = await invoke('get_ollama_endpoint');
-      ollamaEndpoint = endpoint;
-    } catch (error) {
-      ollamaEndpoint = '';
-    }
+  function normalizeEndpointInput(value: string | undefined) {
+    if (!value) return null;
+    const trimmed = value.trim();
+    return trimmed.length === 0 ? null : trimmed;
   }
 
-  async function saveOllamaEndpoint() {
+  async function saveProviderEndpoint(provider: string) {
     try {
-      loadingOllamaEndpoint = true;
-      let endpointToSave = ollamaEndpoint.trim() || DEFAULT_OLLAMA_ENDPOINT;
-      
+      endpointLoading[provider] = true;
+      endpointLoading = { ...endpointLoading };
+      const endpointToSave = normalizeEndpointInput(providerEndpoints[provider]);
+
       if (endpointToSave && !endpointToSave.startsWith('http://') && !endpointToSave.startsWith('https://')) {
         alert('Endpoint must start with http:// or https://');
         return;
       }
-      
-      await invoke('set_ollama_endpoint', { endpointUrl: endpointToSave });
-      
+
+      await invoke('set_provider_custom_endpoint', {
+        provider,
+        endpointUrl: endpointToSave ?? null,
+      });
+
+      if (providerConfigs[provider]) {
+        providerConfigs[provider].keyValidated = false;
+        providerConfigs = { ...providerConfigs };
+      }
+
       clearError();
-      alert('Ollama endpoint saved successfully');
+      alert(`${provider} endpoint saved successfully`);
     } catch (error) {
-      console.error('Failed to save Ollama endpoint:', error);
-      handleError(`Failed to save Ollama endpoint: ${error.message || error}`);
+      console.error(`Failed to save ${provider} endpoint:`, error);
+      handleError(`Failed to save ${provider} endpoint: ${error.message || error}`);
     } finally {
-      loadingOllamaEndpoint = false;
+      endpointLoading[provider] = false;
+      endpointLoading = { ...endpointLoading };
     }
+  }
+
+  function hasCustomEndpoint(provider: string) {
+    const name = provider.toLowerCase();
+    return name === 'ollama' || name === 'lmstudio';
+  }
+
+  function getDefaultEndpoint(provider: string) {
+    const name = provider.toLowerCase();
+    return DEFAULT_ENDPOINTS[name] ?? '';
+  }
+
+  function getEndpointHelp(provider: string) {
+    const name = provider.toLowerCase();
+    if (name === 'ollama') {
+      return `Leave empty to use default (${DEFAULT_ENDPOINTS.ollama})`;
+    }
+    if (name === 'lmstudio') {
+      return `Leave empty to use default (${DEFAULT_ENDPOINTS.lmstudio})`;
+    }
+    return '';
   }
 
   async function validateApiKey(provider) {
     const config = providerConfigs[provider];
-    
-    if (!config.api_key.trim() && provider.toLowerCase() !== 'ollama') {
+
+    if (!config.api_key.trim() && !hasCustomEndpoint(provider)) {
       alert('Please enter an API key first');
       return;
     }
-    
+
     try {
       validatingKeys[provider] = true;
       validatingKeys = { ...validatingKeys };
-      
+
       const result: ValidationResult = await invoke('validate_api_key_and_fetch_models', {
         provider,
-        apiKey: provider.toLowerCase() === 'ollama' ? '' : config.api_key
+        apiKey: hasCustomEndpoint(provider) ? '' : config.api_key,
       });
-      
+
       if (result.valid) {
         config.keyValidated = true;
         providerConfigs = { ...providerConfigs };
-        
         llmStore.refresh();
       } else {
         config.keyValidated = false;
         providerConfigs = { ...providerConfigs };
-        alert(`${provider === 'ollama' ? 'Connection failed' : 'API validation failed'}: ${result.error_message || 'Unknown error'}`);
+        alert(`${hasCustomEndpoint(provider) ? 'Connection failed' : 'API validation failed'}: ${result.error_message || 'Unknown error'}`);
       }
     } catch (error) {
       console.error(`Failed to validate API key for ${provider}:`, error);
       config.keyValidated = false;
       providerConfigs = { ...providerConfigs };
-      alert(`Failed to ${provider === 'ollama' ? 'connect' : 'validate API key'}: ${error.message || error}`);
+      alert(`Failed to ${hasCustomEndpoint(provider) ? 'connect' : 'validate API key'}: ${error.message || error}`);
     } finally {
       validatingKeys[provider] = false;
       validatingKeys = { ...validatingKeys };
@@ -135,7 +173,7 @@
   async function updateApiKey(provider, apiKey) {
     const config = providerConfigs[provider];
     config.api_key = apiKey;
-    
+
     if (!apiKey.trim()) {
       config.keyValidated = false;
       config.enabled = false;
@@ -150,7 +188,7 @@
         return;
       }
     }
-    
+
     providerConfigs = { ...providerConfigs };
   }
 
@@ -178,7 +216,8 @@
 
   function isProviderConfigured(provider) {
     const config = providerConfigs[provider];
-    if (provider.toLowerCase() === 'ollama') {
+    if (!config) return false;
+    if (hasCustomEndpoint(provider)) {
       return config.enabled;
     }
     return config.keyValidated && config.enabled;
@@ -186,7 +225,7 @@
 
   function canEnableProvider(provider) {
     const config = providerConfigs[provider];
-    return config.keyValidated;
+    return config && config.keyValidated;
   }
 
   function getProviderApiUrl(provider) {
@@ -221,7 +260,6 @@
 
 onMount(async () => {
     await loadProviders();
-    await loadOllamaEndpoint();
   });
 </script>
 
@@ -276,23 +314,32 @@ onMount(async () => {
             </div>
           </div>
           
-          {#if provider.toLowerCase() === 'ollama'}
+          {#if hasCustomEndpoint(provider)}
             <div class="config-row">
               <p class="config-label">Custom Endpoint (Optional)</p>
               <div class="input-group">
                 <input 
                   type="text"
-                  bind:value={ollamaEndpoint}
-                  placeholder="http://localhost:11434"
+                  value={providerEndpoints[provider] || ''}
+                  on:input={(e) => {
+                    const target = e.target as HTMLInputElement;
+                    providerEndpoints[provider] = target.value;
+                    providerEndpoints = { ...providerEndpoints };
+                    if (providerConfigs[provider]) {
+                      providerConfigs[provider].keyValidated = false;
+                      providerConfigs = { ...providerConfigs };
+                    }
+                  }}
+                  placeholder={getDefaultEndpoint(provider)}
                   class="config-input"
                 />
                 <button 
                   class="action-button save"
-                  on:click={saveOllamaEndpoint}
-                  disabled={loadingOllamaEndpoint}
-                  title="Save custom endpoint"
+                  on:click={() => saveProviderEndpoint(provider)}
+                  disabled={endpointLoading[provider]}
+                  title={`Save ${provider} endpoint`}
                 >
-                  {#if loadingOllamaEndpoint}
+                  {#if endpointLoading[provider]}
                     <svg class="spinner" viewBox="0 0 24 24" width="16" height="16">
                       <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2" />
                     </svg>
@@ -305,7 +352,7 @@ onMount(async () => {
                   {/if}
                 </button>
               </div>
-              <p class="config-help-text">Leave empty to use default (http://localhost:11434)</p>
+              <p class="config-help-text">{getEndpointHelp(provider)}</p>
             </div>
           {:else}
             <div class="config-row">
@@ -362,7 +409,7 @@ onMount(async () => {
           {/if}
           
           <div class="config-help">
-            {#if provider.toLowerCase() !== 'ollama'}
+            {#if !hasCustomEndpoint(provider)}
               {@const apiUrl = getProviderApiUrl(provider)}
               {@const displayName = getProviderDisplayName(provider)}
               {#if apiUrl}
@@ -370,38 +417,37 @@ onMount(async () => {
               {:else}
                 <p>Get your API key from the {displayName}</p>
               {/if}
-            
             {:else}
-            <div class="config-row">
-              <div class="input-group">
-                <button 
-                  class="action-button validate full-width"
-                  on:click={() => validateApiKey(provider)}
-                  disabled={validatingKeys[provider]}
-                  title="Test connection to Ollama"
-                >
-                  {#if validatingKeys[provider]}
-                    <svg class="spinner" viewBox="0 0 24 24" width="16" height="16">
-                      <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2" />
-                    </svg>
-                    Testing Connection...
-                  {:else}
-                    <Antenna size={16} />
-                    Test Connection
-                  {/if}
-                </button>
-              </div>
-              
-              {#if config.keyValidated}
-                <div class="validation-status success">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-                    <polyline points="22 4 12 14.01 9 11.01"></polyline>
-                  </svg>
-                  Connection successful
+              <div class="config-row">
+                <div class="input-group">
+                  <button 
+                    class="action-button validate full-width"
+                    on:click={() => validateApiKey(provider)}
+                    disabled={validatingKeys[provider]}
+                    title={`Test connection to ${provider}`}
+                  >
+                    {#if validatingKeys[provider]}
+                      <svg class="spinner" viewBox="0 0 24 24" width="16" height="16">
+                        <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2" />
+                      </svg>
+                      Testing Connection...
+                    {:else}
+                      <Antenna size={16} />
+                      Test Connection
+                    {/if}
+                  </button>
                 </div>
-              {/if}
-            </div>
+                
+                {#if config.keyValidated}
+                  <div class="validation-status success">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                      <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                    </svg>
+                    Connection successful
+                  </div>
+                {/if}
+              </div>
             {/if}
           </div>
         </div>

@@ -1916,8 +1916,6 @@ dependencies = [
 [[package]]
 name = "flyllm"
 version = "0.3.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "85d53872ad1ff95a3edb4f2c0504eb27f506309562403106b39aa483bb99e8a5"
 dependencies = [
  "async-trait",
  "env_logger",
