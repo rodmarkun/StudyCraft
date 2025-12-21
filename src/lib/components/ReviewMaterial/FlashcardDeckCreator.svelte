@@ -19,6 +19,7 @@
   // Stores
   import { llmStore } from "../../stores/llmStore";
   import { materialsStore } from "../../stores/materialsStore";
+  import { toastStore } from "../../stores/toastStore";
 
   // Icons
   import { Bot as BotIcon, Plus as PlusIcon, File as FileIcon } from "lucide-svelte";
@@ -56,6 +57,7 @@
   let error = logic.getError;
   let generationStatus = logic.getGenerationStatus;
   let isFormDataInitialized = false;
+  let isSubmitting = false; // Lock to prevent concurrent deck creation
 
   // Reactivity
   $: llmStatus = $llmStore;
@@ -238,23 +240,53 @@
 
   // Deck creation function
   async function handleCreateDeck() {
-  try {
-    // Generate UUID and add temp material to store first
-    const deckId = await materialsStore.addReviewMaterial({
-      name: formData.name,
-      type: 'flashcard_deck',
-      tags: formData.tags
-    });
-    
-    // Now create the deck with the pre-generated ID
-    const newDeck = await logic.createFlashcardDeck(formData, deckId);
-    sessionStorage.removeItem("flashcard-creator-form");
-    onCreated(newDeck);
-    onClose();
-  } catch (err) {
-    error = logic.getError;
+    // Prevent concurrent submissions
+    if (isSubmitting || isCreating) return;
+
+    // Validate form before submission
+    if (!formData.name.trim()) {
+      toastStore.warning('Please enter a deck name');
+      return;
+    }
+
+    if (cards.length === 0) {
+      toastStore.warning('Please add at least one flashcard');
+      return;
+    }
+
+    const invalidCards = cards.filter(
+      (card) => !card.front.trim() || !card.back.trim()
+    );
+    if (invalidCards.length > 0) {
+      toastStore.warning('Please fill in both front and back for all cards');
+      return;
+    }
+
+    isSubmitting = true;
+
+    try {
+      // Generate UUID and add temp material to store first
+      const deckId = await materialsStore.addReviewMaterial({
+        name: formData.name,
+        type: 'flashcard_deck',
+        tags: formData.tags
+      });
+
+      // Now create the deck with the pre-generated ID
+      const newDeck = await logic.createFlashcardDeck(formData, deckId);
+      sessionStorage.removeItem("flashcard-creator-form");
+      toastStore.success('Flashcard deck created successfully');
+      onCreated(newDeck);
+      onClose();
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      console.error('Failed to create flashcard deck:', err);
+      error = logic.getError || errorMessage;
+      toastStore.error(`Failed to create deck: ${errorMessage}`);
+    } finally {
+      isSubmitting = false;
+    }
   }
-}
 
   // Lifecycle functions
   onMount(() => {
@@ -724,9 +756,9 @@
     {:else}
       <Button
         variant="primary"
-        text={isCreating ? "Creating..." : "Create Deck"}
-        changed={isCreating}
-        disabled={!isValid || isCreating}
+        text={isCreating || isSubmitting ? "Creating..." : "Create Deck"}
+        changed={isCreating || isSubmitting}
+        disabled={!isValid || isCreating || isSubmitting}
         onClick={handleCreateDeck}
       />
     {/if}

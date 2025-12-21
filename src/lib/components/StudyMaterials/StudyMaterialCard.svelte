@@ -6,8 +6,9 @@
   // Components
   import MarkdownEditor from "./MarkdownEditor.svelte";
 
-  // Store for caching cover images
+  // Stores
   import { coverImageCache } from "../../stores/coverCache";
+  import { toastStore } from "../../stores/toastStore";
 
   // Props
   export let material;
@@ -117,9 +118,9 @@
   }
 
   function startEditing() {
-    if (!material.is_processing && !selectionMode) {
+    if (!material?.is_processing && !selectionMode) {
       isEditing = true;
-      editingName = material.display_name;
+      editingName = material?.display_name || material?.name || '';
       setTimeout(() => nameElement?.focus(), 50);
     }
   }
@@ -183,7 +184,7 @@
       showMarkdownEditor = true;
     } catch (error) {
       console.error("Failed to get markdown path:", error);
-      alert("Could not open the markdown editor. Please try again later.");
+      toastStore.error("Could not open the markdown editor. Please try again later.");
     }
   }
 
@@ -221,14 +222,19 @@
     ? '2deg'
     : '0deg'});"
   on:click={handleMaterialClick}
+  on:keydown={(e) => (e.key === 'Enter' || e.key === ' ') && handleMaterialClick(e)}
   on:mouseenter={() => !selectionMode && (isHovering = true)}
   on:mouseleave={() => !selectionMode && (isHovering = false)}
+  role="button"
+  tabindex={selectionMode ? 0 : -1}
+  aria-label={`${selectionMode ? (selected ? 'Deselect' : 'Select') : 'Open'} ${material?.display_name || material?.name || 'material'}`}
 >
   {#if !selectionMode}
     <div class="action-buttons">
       <button
         class="material-action-button delete"
         title="Delete material"
+        aria-label="Delete material"
         on:click={showDeleteModal}
       >
         <svg
@@ -241,6 +247,7 @@
           stroke-width="2"
           stroke-linecap="round"
           stroke-linejoin="round"
+          aria-hidden="true"
         >
           <path d="M3 6h18"></path>
           <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
@@ -250,6 +257,7 @@
       <button
         class="material-action-button edit"
         title="Edit markdown"
+        aria-label="Edit markdown"
         on:click={openMarkdownEditor}
         disabled={isProcessing}
       >
@@ -263,6 +271,7 @@
           stroke-width="2"
           stroke-linecap="round"
           stroke-linejoin="round"
+          aria-hidden="true"
         >
           <path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3Z"
           ></path>
@@ -313,8 +322,9 @@
       <h3
         style="font-size: {fontSize}"
         on:dblclick|stopPropagation={startEditing}
+        title={material?.display_name || material?.name || 'Untitled'}
       >
-        {material.display_name || material.name}
+        {material?.display_name || material?.name || 'Untitled'}
       </h3>
     {/if}
     {#if tags.length > 0}
@@ -338,11 +348,21 @@
 </div>
 
 {#if showDeleteConfirm}
-  <div class="modal-backdrop" on:click={() => (showDeleteConfirm = false)}>
-    <div class="modal-content" on:click|stopPropagation>
-      <h4>Delete Material</h4>
+  <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+  <div
+    class="modal-backdrop"
+    on:click={() => (showDeleteConfirm = false)}
+    on:keydown={(e) => e.key === 'Escape' && (showDeleteConfirm = false)}
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="delete-modal-title"
+    tabindex="-1"
+  >
+    <!-- svelte-ignore a11y_no_noninteractive_element_interactions a11y_click_events_have_key_events -->
+    <div class="modal-content" on:click|stopPropagation role="document">
+      <h4 id="delete-modal-title">Delete Material</h4>
       <p>
-        Are you sure you want to delete "{material.display_name}"? This action
+        Are you sure you want to delete "{material?.display_name || material?.name || 'this material'}"? This action
         cannot be undone.
       </p>
       <div class="modal-actions">
@@ -580,6 +600,7 @@
     text-overflow: ellipsis;
     display: -webkit-box;
     -webkit-line-clamp: 2;
+    line-clamp: 2;
     -webkit-box-orient: vertical;
     transition: font-size 0.3s ease;
   }

@@ -14,6 +14,9 @@
   import type { StudyMaterial } from '../../logic/ReviewMaterial/testCreator';
   const logic = new TestEditorLogic();
 
+  // Stores
+  import { toastStore } from '../../stores/toastStore';
+
   // Props
   export let test: ReviewMaterial;
   export let isOpen = false;
@@ -38,6 +41,7 @@
   let isSaving = false;
   let error = '';
   let hasUnsavedChanges = false;
+  let isSubmitting = false; // Lock to prevent concurrent save operations
 
   // Reactivity
   $: stepsComplete = {
@@ -176,19 +180,53 @@
   }
 
   async function handleSaveChanges() {
+    // Prevent concurrent submissions
+    if (isSubmitting || isSaving) return;
+
+    // Validate form before submission
+    if (!formData.name.trim()) {
+      toastStore.warning('Please enter a test name');
+      return;
+    }
+
+    const activeQuestions = questions.filter(q => !q.isDeleted);
+    if (activeQuestions.length === 0) {
+      toastStore.warning('Test must have at least one question');
+      return;
+    }
+
+    const invalidQuestions = activeQuestions.filter(
+      (q) => !q.question.trim() ||
+             q.answers.length < 2 ||
+             !q.answers.some(a => a.is_correct) ||
+             q.answers.some(a => !a.answer_text.trim())
+    );
+    if (invalidQuestions.length > 0) {
+      toastStore.warning('Please ensure all questions have text, at least 2 answers, one correct answer, and all answers have text');
+      return;
+    }
+
+    isSubmitting = true;
+
     try {
       await logic.saveChanges(formData);
-      
+
+      toastStore.success('Test updated successfully');
       onUpdated({
         testId: test.id,
         name: formData.name,
-        questionsCount: questions.length
+        questionsCount: activeQuestions.length
       });
-      
+
       onClose();
-    } catch (err) {
-      console.error('Save failed:', err);
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      console.error('Failed to save test changes:', err);
+      error = errorMessage;
+      toastStore.error(`Failed to save changes: ${errorMessage}`);
       updateReactiveVars();
+    } finally {
+      isSubmitting = false;
     }
   }
 
@@ -491,11 +529,11 @@
         onClick={handleNextStep}
       />
     {:else}
-      <Button 
-        variant="primary" 
-        text={isSaving ? 'Saving...' : 'Save Changes'}
-        changed={isSaving}
-        disabled={!isValid || isSaving || !hasUnsavedChanges}
+      <Button
+        variant="primary"
+        text={isSaving || isSubmitting ? 'Saving...' : 'Save Changes'}
+        changed={isSaving || isSubmitting}
+        disabled={!isValid || isSaving || isSubmitting || !hasUnsavedChanges}
         onClick={handleSaveChanges}
       />
     {/if}

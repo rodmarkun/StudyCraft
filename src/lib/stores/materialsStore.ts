@@ -55,6 +55,7 @@ function createMaterialsStore() {
   let pollingInterval: number | null = null;
   let isPolling = false;
   let savedScrollPosition = 0;
+  let searchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 
   const getMaterialIdentifier = (material: StudyMaterial | ReviewMaterial): string => {
     return material.id;
@@ -200,7 +201,21 @@ async function updateSpecificMaterial(identifier: string) {
 
   function destroy() {
     stopPolling();
-    unlisten.forEach(unl => unl());
+
+    // Clean up search debounce timer
+    if (searchDebounceTimer) {
+      clearTimeout(searchDebounceTimer);
+      searchDebounceTimer = null;
+    }
+
+    // Clean up event listeners
+    unlisten.forEach(unl => {
+      try {
+        unl();
+      } catch (error) {
+        console.error('Error cleaning up listener:', error);
+      }
+    });
     unlisten = [];
   }
 
@@ -613,11 +628,21 @@ async function updateSpecificMaterial(identifier: string) {
     }, 0);
   }
   
-  function setSearchTerm(term: string) {
-    update(state => ({
-      ...state,
-      searchTerm: term
-    }));
+  function setSearchTerm(term: string, debounceMs: number = 150) {
+    // Clear any existing debounce timer
+    if (searchDebounceTimer) {
+      clearTimeout(searchDebounceTimer);
+      searchDebounceTimer = null;
+    }
+
+    // Debounce the search update to avoid excessive filtering on each keystroke
+    searchDebounceTimer = setTimeout(() => {
+      update(state => ({
+        ...state,
+        searchTerm: term
+      }));
+      searchDebounceTimer = null;
+    }, debounceMs);
   }
 
   return {

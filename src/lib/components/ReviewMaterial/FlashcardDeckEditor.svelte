@@ -13,6 +13,9 @@
   import { FlashcardDeckEditorLogic, type ReviewMaterial, type DeckEditFormData } from '../../logic/ReviewMaterial/flashcardDeckEditor';
   import type { StudyMaterial } from '../../logic/ReviewMaterial/flashcardDeckCreator';
 
+  // Stores
+  import { toastStore } from '../../stores/toastStore';
+
   // Props
   export let deck: ReviewMaterial;
   export let isOpen = false;
@@ -41,6 +44,7 @@
   let isSaving = false;
   let error = '';
   let hasUnsavedChanges = false;
+  let isSubmitting = false; // Lock to prevent concurrent save operations
 
   // Reactive statements
   $: stepsComplete = {
@@ -143,18 +147,50 @@
   }
 
   async function handleSaveChanges() {
+    // Prevent concurrent submissions
+    if (isSubmitting || isSaving) return;
+
+    // Validate form before submission
+    if (!formData.name.trim()) {
+      toastStore.warning('Please enter a deck name');
+      return;
+    }
+
+    const activeCards = cards.filter(card => !card.isDeleted);
+    if (activeCards.length === 0) {
+      toastStore.warning('Deck must have at least one card');
+      return;
+    }
+
+    const invalidCards = activeCards.filter(
+      (card) => !card.front.trim() || !card.back.trim()
+    );
+    if (invalidCards.length > 0) {
+      toastStore.warning('Please fill in both front and back for all cards');
+      return;
+    }
+
+    isSubmitting = true;
+
     try {
       await logic.saveChanges(formData);
-      
+
+      toastStore.success('Deck updated successfully');
       onUpdated({
         deckId: deck.id,
         name: formData.name,
-        cardsCount: cards.length
+        cardsCount: activeCards.length
       });
-      
+
       onClose();
-    } catch (err) {
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      console.error('Failed to save deck changes:', err);
+      error = errorMessage;
+      toastStore.error(`Failed to save changes: ${errorMessage}`);
       updateReactiveVars();
+    } finally {
+      isSubmitting = false;
     }
   }
 
@@ -375,10 +411,11 @@
       />
     {:else}
       <Button
-        variant="primary" 
-        text="Save Changes"
-        onClick={handleSaveChanges} 
-        disabled={!isValid || isSaving || !hasUnsavedChanges}
+        variant="primary"
+        text={isSaving || isSubmitting ? "Saving..." : "Save Changes"}
+        changed={isSaving || isSubmitting}
+        onClick={handleSaveChanges}
+        disabled={!isValid || isSaving || isSubmitting || !hasUnsavedChanges}
       />
     {/if}
   </div>

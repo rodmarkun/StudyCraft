@@ -1,10 +1,13 @@
-<script>
+<script lang="ts">
   import { onMount } from 'svelte';
   import { spring } from 'svelte/motion';
   import { invoke } from '@tauri-apps/api/core';
   import { save } from '@tauri-apps/plugin-dialog';
   import { writeTextFile } from '@tauri-apps/plugin-fs';
   import "../../styles/variables.css";
+
+  // Stores
+  import { toastStore } from "../../stores/toastStore";
 
   // Assets
   import flashcardDeckIcon from '../../../assets/flashcard_deck_icon.png';
@@ -35,6 +38,7 @@
   let cardCounts = null;
   let isLoadingCounts = false;
   let isExporting = false;
+  let loadCountsRequestId = 0; // Track request to handle race conditions
   const size = spring(1, {
     stiffness: 0.2,
     damping: 0.7
@@ -63,7 +67,7 @@
     return undefined;
   })();
   
-  $: materialName = material.name || material.review_material_name;  
+  $: materialName = material?.name || material?.review_material_name || 'Untitled';
   $: isAllCaughtUp = cardCounts && cardCounts.total_count > 0 && cardCounts.pending_count === 0;
   $: {
     size.set(zoomLevel);
@@ -76,35 +80,46 @@
   }
   
   async function loadCardCounts() {
+    // Increment request ID to track this specific request
+    const currentRequestId = ++loadCountsRequestId;
+
     if (isLoadingCounts) {
       return;
     }
     try {
       isLoadingCounts = true;
       const deckIdString = String(materialId);
-      
-      const counts = await invoke('get_flashcard_counts', { 
+
+      const counts = await invoke('get_flashcard_counts', {
         deckId: deckIdString
       });
-      
-      cardCounts = counts;
-    } catch (error) {
+
+      // Only update state if this is still the latest request
+      // This prevents stale data from overwriting newer data
+      if (currentRequestId === loadCountsRequestId) {
+        cardCounts = counts;
+      }
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       console.error('Failed to load card counts:', error);
-      console.error('Error details:', {
-        message: error.message,
-        stack: error.stack
-      });
-      
-      cardCounts = {
-        total_count: material.cards_count || 0,
-        pending_count: 0,
-        new_count: 0,
-        learning_count: 0,
-        review_count: 0
-      };
-      console.log('Using fallback cardCounts:', cardCounts);
+      console.error('Error details:', errorMessage);
+
+      // Only update on error if this is still the latest request
+      if (currentRequestId === loadCountsRequestId) {
+        cardCounts = {
+          total_count: material?.cards_count || 0,
+          pending_count: 0,
+          new_count: 0,
+          learning_count: 0,
+          review_count: 0
+        };
+        console.log('Using fallback cardCounts:', cardCounts);
+      }
     } finally {
-      isLoadingCounts = false;
+      // Only clear loading state if this is still the latest request
+      if (currentRequestId === loadCountsRequestId) {
+        isLoadingCounts = false;
+      }
     }
   }
   
@@ -116,7 +131,7 @@
     try {
       isExporting = true;
       
-      const ankiContent = await invoke('export_flashcard_deck_to_anki', {
+      const ankiContent = await invoke<string>('export_flashcard_deck_to_anki', {
         deckId: String(materialId)
       });
       
@@ -133,10 +148,11 @@
       if (filePath) {
         await writeTextFile(filePath, ankiContent);
         console.log('Anki export saved to:', filePath);
+        toastStore.success('Deck exported to Anki format successfully');
       }
     } catch (error) {
       console.error('Failed to export to Anki:', error);
-      alert('Failed to export deck to Anki format. Please try again.');
+      toastStore.error('Failed to export deck to Anki format. Please try again.');
     } finally {
       isExporting = false;
     }
@@ -494,19 +510,29 @@
 </div>
 
 {#if showDeleteConfirm}
-  <div class="modal-backdrop" on:click={() => showDeleteConfirm = false} role="button" tabindex="0" aria-label="Close Dialog">
-    <div class="modal-content" on:click|stopPropagation>
-      <h4>Delete Material</h4>
+  <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+  <div
+    class="modal-backdrop"
+    on:click={() => showDeleteConfirm = false}
+    on:keydown={(e) => e.key === 'Escape' && (showDeleteConfirm = false)}
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="rmc-delete-modal-title"
+    tabindex="-1"
+  >
+    <!-- svelte-ignore a11y_no_noninteractive_element_interactions a11y_click_events_have_key_events -->
+    <div class="modal-content" on:click|stopPropagation role="document">
+      <h4 id="rmc-delete-modal-title">Delete Material</h4>
       <p>Are you sure you want to delete "{materialName}"? This action cannot be undone.</p>
       <div class="modal-actions">
-        <button 
-          class="cancel-button" 
+        <button
+          class="cancel-button"
           on:click={() => showDeleteConfirm = false}
         >
           Cancel
         </button>
-        <button 
-          class="confirm-button" 
+        <button
+          class="confirm-button"
           on:click={() => {
             handleDelete();
             showDeleteConfirm = false;
@@ -716,6 +742,7 @@
  text-overflow: ellipsis;
  display: -webkit-box;
  -webkit-line-clamp: 2;
+ line-clamp: 2;
  -webkit-box-orient: vertical;
  transition: font-size 0.3s ease;
  font-weight: 600;

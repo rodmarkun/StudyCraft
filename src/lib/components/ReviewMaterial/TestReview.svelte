@@ -18,6 +18,7 @@
 
   // Stores
   import { llmStore } from "../../stores/llmStore";
+  import { toastStore } from "../../stores/toastStore";
 
   // Props
   export let test = null;
@@ -65,6 +66,8 @@
   let keyboardEnabled = true;
   let showQuestionReview = false;
   let detailedResults = [];
+  let isSubmittingAnswer = false; // Lock to prevent concurrent answer submissions
+  let confettiTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
   // Reactivity
   $: llmStatus = $llmStore;
@@ -251,28 +254,33 @@
   }
 
   async function handleSubmitAnswer() {
+    // Comprehensive guard against concurrent submissions
     if (
       !reviewLogic ||
       selectedAnswers.length === 0 ||
       isAnimating ||
-      !currentQuestion
+      !currentQuestion ||
+      isSubmittingAnswer
     )
       return;
 
+    // Set submission lock
+    isSubmittingAnswer = true;
     recordQuestionResponseTime();
 
     keyboardEnabled = false;
     isAnimating = true;
     questionDirection = 1;
 
+    const isCurrentlyLastQuestion = !reviewLogic.canMoveNext();
+
     try {
-      const isCurrentlyLastQuestion = !reviewLogic.canMoveNext();
       const isCorrect = reviewLogic.submitAnswer(selectedAnswers);
 
       setTimeout(() => {
         if (isCurrentlyLastQuestion) {
           completeTest();
-        } else if (reviewLogic.canMoveNext()) {
+        } else if (reviewLogic && reviewLogic.canMoveNext()) {
           reviewLogic.moveNext();
           updateDisplayState();
           resetQuestionState();
@@ -284,19 +292,19 @@
           keyboardEnabled = true;
           isAnimating = false;
           questionDirection = 0;
+          isSubmittingAnswer = false;
         }, 100);
       }, 300);
-    } catch (err) {
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
       console.error("Failed to submit answer:", err);
-      console.error("Error details:", err.message);
-      console.error("Error stack:", err.stack);
+      toastStore.warning(`Answer may not be recorded: ${errorMessage}`);
 
+      // Still proceed to next question even on error
       setTimeout(() => {
-        const isCurrentlyLastQuestion = !reviewLogic.canMoveNext();
-
         if (isCurrentlyLastQuestion) {
           completeTest();
-        } else if (reviewLogic.canMoveNext()) {
+        } else if (reviewLogic && reviewLogic.canMoveNext()) {
           reviewLogic.moveNext();
           updateDisplayState();
           resetQuestionState();
@@ -308,6 +316,7 @@
           keyboardEnabled = true;
           isAnimating = false;
           questionDirection = 0;
+          isSubmittingAnswer = false;
         }, 100);
       }, 300);
     }
@@ -449,10 +458,14 @@
           sessionId: sessionId,
         });
 
-        // Show confetti animation
+        // Show confetti animation with cleanup tracking
         confetti = true;
-        setTimeout(() => {
+        if (confettiTimeoutId) {
+          clearTimeout(confettiTimeoutId);
+        }
+        confettiTimeoutId = setTimeout(() => {
           confetti = false;
+          confettiTimeoutId = null;
         }, 5000);
 
         testComplete = true;
@@ -530,7 +543,18 @@
   });
 
   onDestroy(() => {
+    // Clean up timer
     stopTestSession();
+
+    // Clean up confetti timeout
+    if (confettiTimeoutId) {
+      clearTimeout(confettiTimeoutId);
+      confettiTimeoutId = null;
+    }
+
+    // Reset state locks
+    isSubmittingAnswer = false;
+    isAnimating = false;
   });
 </script>
 

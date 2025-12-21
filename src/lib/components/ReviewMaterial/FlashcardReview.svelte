@@ -11,8 +11,9 @@ import Button from '../Shared/Button.svelte';
 // Logic
 import { FlashcardReviewLogic, type Card } from '../../logic/ReviewMaterial/flashcardReview';
 
-// Store
+// Stores
 import { llmStore } from '../../stores/llmStore';
+import { toastStore } from '../../stores/toastStore';
 
 // Props
 export let deck = null;
@@ -57,6 +58,8 @@ let session = null;
 let isAnimating = false;
 let cardDirection = 0; // -1 for left, 1 for right, 0 for none
 let keyboardEnabled = true;
+let isSubmittingRating = false; // Lock to prevent concurrent rating submissions
+let confettiTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
 // Reactivity
 $: llmStatus = $llmStore;
@@ -237,78 +240,84 @@ async function handleExplain() {
   }
 }
 
-async function handleRating(difficulty) {
-  if (!reviewLogic || !showAnswer || isAnimating || !currentCard) return;
-  
+async function handleRating(difficulty: string) {
+  // Comprehensive guard against concurrent submissions
+  if (!reviewLogic || !showAnswer || isAnimating || !currentCard || isSubmittingRating) return;
+
   if (currentCard.id == null || currentCard.id === undefined) {
     console.error('ERROR: Current card ID is null or undefined!', currentCard);
+    toastStore.error('Invalid card data. Please try again.');
     return;
   }
-  
+
   if (typeof currentCard.id !== 'number' || isNaN(currentCard.id) || currentCard.id <= 0) {
     console.error('ERROR: Invalid card ID:', currentCard.id, typeof currentCard.id);
+    toastStore.error('Invalid card ID. Please try again.');
     return;
   }
-  
+
+  // Set submission lock
+  isSubmittingRating = true;
   recordCardResponseTime();
-  
+
   keyboardEnabled = false;
   isAnimating = true;
   cardDirection = 1;
-  
+
+  const isCurrentlyLastCard = !reviewLogic.canMoveNext();
+
   try {
-    const isCurrentlyLastCard = !reviewLogic.canMoveNext();
-    
     reviewLogic.reviewCard(difficulty);
-    
+
     const payload = {
       cardId: currentCard.id,
       difficulty: difficulty
     };
     const updatedCard = await invoke('update_flashcard_after_review', payload);
-    
+
     reviewLogic.updateCard(currentCard.id, updatedCard);
-    
+
     setTimeout(() => {
       if (isCurrentlyLastCard) {
         completeStudy();
-      } else if (reviewLogic.canMoveNext()) {
+      } else if (reviewLogic && reviewLogic.canMoveNext()) {
         reviewLogic.moveNext();
         updateDisplayState();
         resetCardState();
       } else {
         completeStudy();
       }
-      
+
       setTimeout(() => {
         keyboardEnabled = true;
         isAnimating = false;
         cardDirection = 0;
+        isSubmittingRating = false;
       }, 100);
     }, 300);
-    
-  } catch (err) {
+
+  } catch (err: unknown) {
+    const errorMessage = err instanceof Error ? err.message : 'Unknown error';
     console.error('Failed to update card:', err);
-    console.error('Error details:', err.message);
-    console.error('Error stack:', err.stack);
-    
+    toastStore.warning(`Card progress may not be saved: ${errorMessage}`);
+
+    // Still proceed to next card even on error
     setTimeout(() => {
-      const isCurrentlyLastCard = !reviewLogic.canMoveNext();
-      
       if (isCurrentlyLastCard) {
         completeStudy();
-      } else if (reviewLogic.canMoveNext()) {
+      } else if (reviewLogic && reviewLogic.canMoveNext()) {
         reviewLogic.moveNext();
         updateDisplayState();
         resetCardState();
       } else {
         completeStudy();
       }
-      
+
       setTimeout(() => {
         keyboardEnabled = true;
         isAnimating = false;
         cardDirection = 0;
+        isSubmittingRating = false;
       }, 100);
     }, 300);
   }
@@ -441,12 +450,16 @@ async function completeStudy() {
         sessionId: sessionId
       });
       
-      // Show confetti animation
+      // Show confetti animation with cleanup tracking
       confetti = true;
-      setTimeout(() => {
+      if (confettiTimeoutId) {
+        clearTimeout(confettiTimeoutId);
+      }
+      confettiTimeoutId = setTimeout(() => {
         confetti = false;
+        confettiTimeoutId = null;
       }, 5000);
-      
+
       studyComplete = true;
       
     } catch (err) {
@@ -529,7 +542,18 @@ onMount(() => {
 });
 
 onDestroy(() => {
+  // Clean up timer
   stopStudySession();
+
+  // Clean up confetti timeout
+  if (confettiTimeoutId) {
+    clearTimeout(confettiTimeoutId);
+    confettiTimeoutId = null;
+  }
+
+  // Reset state locks
+  isSubmittingRating = false;
+  isAnimating = false;
 });
 </script>
 

@@ -22,43 +22,60 @@
 
   // Stores
   import {llmStore} from './lib/stores/llmStore';
+  import {toastStore} from './lib/stores/toastStore';
 
   // Types
-  import type { SortOption } from './lib/stores/materialsStore';
-  let sortOptions = [
+  import type { SortOption, StudyMaterial, ReviewMaterial } from './lib/stores/materialsStore';
+  import type { ToastType } from './lib/components/Shared/Toast.svelte';
+
+  type ViewMode = 'study' | 'review' | 'stats';
+
+  interface MaterialsBoardRef {
+    updateTestCreator: (materials: (StudyMaterial | ReviewMaterial)[]) => void;
+    updateFlashcardCreator: (materials: (StudyMaterial | ReviewMaterial)[]) => void;
+  }
+
+  interface MaterialsSelectorContext {
+    fromFlashcardCreator?: boolean;
+    fromTestCreator?: boolean;
+  }
+
+  interface MaterialSelectorDetail {
+    fromFlashcardCreator?: boolean;
+    fromTestCreator?: boolean;
+    currentSelectedMaterials?: (StudyMaterial | ReviewMaterial)[];
+  }
+
+  const sortOptions = [
     { value: "date_asc", label: "Oldest first" },
     { value: "date_desc", label: "Newest first" },
     { value: "name_asc", label: "Name (A-Z)" },
     { value: "name_desc", label: "Name (Z-A)" }
-  ];
+  ] as const;
 
   // State
-  let zoomLevel = 1;
-  let currErrorMessage = "";
-  let currViewMode = "study";
-  let showKeyboardShortcuts = false;
-  let showSettings = false;
-  let showingMaterialSelector = false;
-  let selectedStudyMaterials: any[] = [];
-  let showFirstTimeModal = false;
+  let zoomLevel: number = 1;
+  let currViewMode: ViewMode = "study";
+  let showKeyboardShortcuts: boolean = false;
+  let showSettings: boolean = false;
+  let showingMaterialSelector: boolean = false;
+  let selectedStudyMaterials: (StudyMaterial | ReviewMaterial)[] = [];
+  let showFirstTimeModal: boolean = false;
   let sortOption: SortOption = "date_asc";
-  let showSearch = false;
-  let searchTerm = '';
-  let materialsBoardRef: any;
+  let showSearch: boolean = false;
+  let searchTerm: string = '';
+  let materialsBoardRef: MaterialsBoardRef | null = null;
   let appIsReady: boolean = false;
 
   // Which creator requested materials from the MaterialsBoard
-  let materialsSelectorContext: {
-    fromFlashcardCreator?: boolean;
-    fromTestCreator?: boolean;
-  } = {};
+  let materialsSelectorContext: MaterialsSelectorContext = {};
 
   // Functions
-  function clearError() {
-    currErrorMessage = "";
+  function clearToast() {
+    toastStore.clear();
   }
 
-  function handleViewChange(mode) {
+  function handleViewChange(mode: ViewMode) {
     currViewMode = mode;
   }
 
@@ -71,18 +88,18 @@
     llmStore.refresh();
   }
 
-  function handleShowMaterialsSelector(detail) {
+  function handleShowMaterialsSelector(detail: MaterialSelectorDetail | undefined) {
     console.log("App: handleShowMaterialsSelector called with:", detail);
     // Store the context of which creator requested materials
     materialsSelectorContext = {
       fromFlashcardCreator: detail?.fromFlashcardCreator,
       fromTestCreator: detail?.fromTestCreator
     };
-    
+
     showingMaterialSelector = true;
     currViewMode = 'study';
-    
-    if (detail?.currentSelectedMaterials?.length > 0) {
+
+    if (detail?.currentSelectedMaterials && detail.currentSelectedMaterials.length > 0) {
       selectedStudyMaterials = [...detail.currentSelectedMaterials];
     } else if (selectedStudyMaterials.length > 0) {
       console.log('Keeping existing selectedStudyMaterials:', selectedStudyMaterials);
@@ -91,23 +108,24 @@
     }
   }
 
-  function handleMaterialsSelected(materials) {
+  function handleMaterialsSelected(materials: (StudyMaterial | ReviewMaterial)[]) {
     console.log("Materials selected in App:", materials);
     selectedStudyMaterials = materials;
     showingMaterialSelector = false;
     currViewMode = 'review';
-    
-    setTimeout(() => {
+
+    // Use requestAnimationFrame for more reliable timing than setTimeout(0)
+    requestAnimationFrame(() => {
       if (materialsBoardRef) {
         if (materialsSelectorContext.fromTestCreator) {
           materialsBoardRef.updateTestCreator(selectedStudyMaterials);
         } else if (materialsSelectorContext.fromFlashcardCreator) {
           materialsBoardRef.updateFlashcardCreator(selectedStudyMaterials);
         }
-        
+
         materialsSelectorContext = {};
       }
-    }, 0);
+    });
   }
 
   function handleSelectionCancelled() {
@@ -116,13 +134,13 @@
     materialsSelectorContext = {};
   }
 
-  function handleZoomChange(zoomValue) {
+  function handleZoomChange(zoomValue: number) {
     zoomLevel = zoomValue;
   }
 
   function handleSortChange(event: Event) {
     const target = event.target as HTMLSelectElement;
-    sortOption = target.value as SortOption; 
+    sortOption = target.value as SortOption;
   }
 
   function toggleSearch() {
@@ -166,8 +184,12 @@
 </script>
 
 <div class="app" data-theme={$theme}>
-  
-  <Toast message={currErrorMessage} onClose={clearError} />
+
+  <Toast
+    message={$toastStore.current?.message ?? ''}
+    type={$toastStore.current?.type ?? 'error'}
+    onClose={clearToast}
+  />
 
   <Header
     {currViewMode}

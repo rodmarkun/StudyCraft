@@ -24,6 +24,7 @@
     type SortOption,
   } from "../../stores/materialsStore";
   import { tagsStore } from "../../stores/tags";
+  import { toastStore } from "../../stores/toastStore";
 
   export let displayMode = "visual";
   export let zoomLevel = 1;
@@ -165,13 +166,27 @@
         }]
       });
 
-      if (selected) {
-        selected.forEach(async (material) => {
-          await materialsStore.addStudyMaterialFromPath(material);
-        });
+      if (selected && selected.length > 0) {
+        // Process files sequentially to avoid race conditions
+        const errors: string[] = [];
+        for (const filePath of selected) {
+          try {
+            await materialsStore.addStudyMaterialFromPath(filePath);
+          } catch (error) {
+            const fileName = filePath.split(/[/\\]/).pop() || filePath;
+            errors.push(fileName);
+            console.error(`Failed to add file ${fileName}:`, error);
+          }
+        }
+        if (errors.length > 0) {
+          toastStore.error(`Failed to add: ${errors.join(', ')}`);
+        } else if (selected.length > 1) {
+          toastStore.success(`Added ${selected.length} files successfully`);
+        }
       }
     } catch (error) {
       console.error('File selection failed:', error);
+      toastStore.error('Failed to open file dialog');
     }
   }
 
@@ -315,7 +330,8 @@
       }
     } catch (error) {
       console.error("Error in handleFileSelect:", error);
-      alert("Failed to add study material: " + error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      toastStore.error(`Failed to add study material: ${errorMessage}`);
     }
   }
 
@@ -327,17 +343,24 @@
       return;
     }
 
-    try {
-      await Promise.all(
-        filePaths.map(async (filePath) => {
-          console.log("Processing dropped file:", filePath);
-          await materialsStore.addStudyMaterialFromPath(filePath);
-          console.log("Dropped file added successfully");
-        }),
-      );
-    } catch (error) {
-      console.error("Error processing dropped files:", error);
-      alert("Failed to add some study materials: " + error);
+    // Process files sequentially to avoid race conditions
+    const errors: string[] = [];
+    for (const filePath of filePaths) {
+      try {
+        console.log("Processing dropped file:", filePath);
+        await materialsStore.addStudyMaterialFromPath(filePath);
+        console.log("Dropped file added successfully");
+      } catch (error) {
+        const fileName = filePath.split(/[/\\]/).pop() || filePath;
+        errors.push(fileName);
+        console.error(`Error processing dropped file ${fileName}:`, error);
+      }
+    }
+
+    if (errors.length > 0) {
+      toastStore.error(`Failed to add: ${errors.join(', ')}`);
+    } else if (filePaths.length > 1) {
+      toastStore.success(`Added ${filePaths.length} files successfully`);
     }
   }
 
@@ -349,9 +372,11 @@
 
       if (material) {
         await materialsStore.deleteMaterial(material);
+        toastStore.success('Material deleted successfully');
       }
     } catch (error) {
-      alert(`Failed to delete material: ${error}`);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      toastStore.error(`Failed to delete material: ${errorMessage}`);
     }
   }
 
@@ -458,18 +483,44 @@
   });
 
   onDestroy(() => {
-    materialsStore.destroy();
-    window.removeEventListener("resize", handleResize);
-    window.removeEventListener("click", handleClickOutside);
+    // Clean up store
+    try {
+      materialsStore.destroy();
+    } catch (error) {
+      console.error('Error destroying materials store:', error);
+    }
 
-    if (tauriUnlisten) {
-      tauriUnlisten();
+    // Clean up window event listeners
+    try {
+      window.removeEventListener("resize", handleResize);
+      window.removeEventListener("click", handleClickOutside);
+    } catch (error) {
+      console.error('Error removing window event listeners:', error);
     }
-    if (tauriUnlistenResized) {
-      tauriUnlistenResized();
+
+    // Clean up Tauri listeners safely
+    try {
+      if (tauriUnlisten && typeof tauriUnlisten === 'function') {
+        tauriUnlisten();
+      }
+    } catch (error) {
+      console.error('Error cleaning up tauriUnlisten:', error);
     }
-    if (dragDropUnlisten) {
-      dragDropUnlisten();
+
+    try {
+      if (tauriUnlistenResized && typeof tauriUnlistenResized === 'function') {
+        tauriUnlistenResized();
+      }
+    } catch (error) {
+      console.error('Error cleaning up tauriUnlistenResized:', error);
+    }
+
+    try {
+      if (dragDropUnlisten && typeof dragDropUnlisten === 'function') {
+        dragDropUnlisten();
+      }
+    } catch (error) {
+      console.error('Error cleaning up dragDropUnlisten:', error);
     }
   });
 
@@ -593,7 +644,10 @@
   {/if}
 
   {#if $materialsStore.isLoading}
-    <div class="loading">Loading {materialType} materials...</div>
+    <div class="loading">
+      <div class="loading-spinner"></div>
+      <span>Loading {materialType} materials...</span>
+    </div>
   {/if}
 
   {#if !$materialsStore.isLoading && $materialsStore.materials.length === 0 && !showFlashcardCreator && !showFlashcardDeckEditor && !showTestCreator && !showTestEditor}
@@ -800,10 +854,30 @@
   }
 
   .loading {
-    text-align: center;
-    padding: 1rem 2rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem 2rem;
     color: var(--text-secondary);
     font-family: var(--font-body);
+    gap: 1rem;
+    min-height: 200px;
+  }
+
+  .loading-spinner {
+    width: 32px;
+    height: 32px;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
   }
 
   .empty-state {

@@ -6,12 +6,13 @@
 
   // Stores
   import { llmStore } from '../../stores/llmStore';
+  import { toastStore } from '../../stores/toastStore';
 
   // Types
   import {type ProviderConfig, type ValidationResult} from '../../logic/Settings/types'
 
   // Props
-  export let handleError = (error) => {};
+  export let handleError = (error: string) => {};
   export let clearError = () => {};
 
   // States
@@ -76,56 +77,58 @@
     try {
       loadingOllamaEndpoint = true;
       let endpointToSave = ollamaEndpoint.trim() || DEFAULT_OLLAMA_ENDPOINT;
-      
+
       if (endpointToSave && !endpointToSave.startsWith('http://') && !endpointToSave.startsWith('https://')) {
-        alert('Endpoint must start with http:// or https://');
+        toastStore.warning('Endpoint must start with http:// or https://');
         return;
       }
-      
+
       await invoke('set_ollama_endpoint', { endpointUrl: endpointToSave });
-      
+
       clearError();
-      alert('Ollama endpoint saved successfully');
-    } catch (error) {
+      toastStore.success('Ollama endpoint saved successfully');
+    } catch (error: unknown) {
       console.error('Failed to save Ollama endpoint:', error);
-      handleError(`Failed to save Ollama endpoint: ${error.message || error}`);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      handleError(`Failed to save Ollama endpoint: ${errorMessage}`);
     } finally {
       loadingOllamaEndpoint = false;
     }
   }
 
-  async function validateApiKey(provider) {
+  async function validateApiKey(provider: string) {
     const config = providerConfigs[provider];
-    
+
     if (!config.api_key.trim() && provider.toLowerCase() !== 'ollama') {
-      alert('Please enter an API key first');
+      toastStore.warning('Please enter an API key first');
       return;
     }
-    
+
     try {
       validatingKeys[provider] = true;
       validatingKeys = { ...validatingKeys };
-      
+
       const result: ValidationResult = await invoke('validate_api_key_and_fetch_models', {
         provider,
         apiKey: provider.toLowerCase() === 'ollama' ? '' : config.api_key
       });
-      
+
       if (result.valid) {
         config.keyValidated = true;
         providerConfigs = { ...providerConfigs };
-        
+        toastStore.success(`${provider === 'ollama' ? 'Connection successful' : 'API key validated'}`);
         llmStore.refresh();
       } else {
         config.keyValidated = false;
         providerConfigs = { ...providerConfigs };
-        alert(`${provider === 'ollama' ? 'Connection failed' : 'API validation failed'}: ${result.error_message || 'Unknown error'}`);
+        toastStore.error(`${provider === 'ollama' ? 'Connection failed' : 'API validation failed'}: ${result.error_message || 'Unknown error'}`);
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error(`Failed to validate API key for ${provider}:`, error);
       config.keyValidated = false;
       providerConfigs = { ...providerConfigs };
-      alert(`Failed to ${provider === 'ollama' ? 'connect' : 'validate API key'}: ${error.message || error}`);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      toastStore.error(`Failed to ${provider === 'ollama' ? 'connect' : 'validate API key'}: ${errorMessage}`);
     } finally {
       validatingKeys[provider] = false;
       validatingKeys = { ...validatingKeys };

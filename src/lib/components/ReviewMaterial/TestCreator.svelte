@@ -16,6 +16,7 @@
   // Stores
   import { llmStore } from '../../stores/llmStore';
   import { materialsStore } from '../../stores/materialsStore';
+  import { toastStore } from '../../stores/toastStore';
 
   // Icons
   import { Bot as BotIcon, File as FileIcon } from 'lucide-svelte';
@@ -48,6 +49,7 @@
   let error = logic.getError;
   let generationStatus = logic.getGenerationStatus;
   let isFormDataInitialized = false;
+  let isSubmitting = false; // Lock to prevent concurrent test creation
 
   // Reactivity
   $: llmStatus = $llmStore;
@@ -224,17 +226,51 @@
 
   // Test creation function
   async function handleCreateTest() {
+    // Prevent concurrent submissions
+    if (isSubmitting || isCreating) return;
+
+    // Validate form before submission
+    if (!formData.name.trim()) {
+      toastStore.warning('Please enter a test name');
+      return;
+    }
+
+    if (questions.length === 0) {
+      toastStore.warning('Please add at least one question');
+      return;
+    }
+
+    const invalidQuestions = questions.filter(
+      (q) => !q.question.trim() ||
+             q.answers.length < 2 ||
+             !q.answers.some(a => a.is_correct) ||
+             q.answers.some(a => !a.answer_text.trim())
+    );
+    if (invalidQuestions.length > 0) {
+      toastStore.warning('Please ensure all questions have text, at least 2 answers, one correct answer, and all answers have text');
+      return;
+    }
+
+    isSubmitting = true;
+
     try {
-      const deckId = await materialsStore.addReviewMaterial({
+      const testId = await materialsStore.addReviewMaterial({
         name: formData.name,
         type: 'test',
         tags: formData.tags
       });
-      const newTest = await logic.createTest(formData, deckId);
+      const newTest = await logic.createTest(formData, testId);
       sessionStorage.removeItem('test-creator-form');
+      toastStore.success('Test created successfully');
       onCreated(newTest);
-    } catch (err) {
-      error = logic.getError;
+      onClose();
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      console.error('Failed to create test:', err);
+      error = logic.getError || errorMessage;
+      toastStore.error(`Failed to create test: ${errorMessage}`);
+    } finally {
+      isSubmitting = false;
     }
   }
 
@@ -667,9 +703,9 @@
     {:else}
         <Button
         variant="primary"
-        text={isCreating ? "Creating..." : "Create Test"}
-        changed={isCreating}
-        disabled={!isValid || isCreating}
+        text={isCreating || isSubmitting ? "Creating..." : "Create Test"}
+        changed={isCreating || isSubmitting}
+        disabled={!isValid || isCreating || isSubmitting}
         onClick={handleCreateTest}
         />
     {/if}
